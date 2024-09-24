@@ -1,0 +1,53 @@
+# Layers
+InputLayer: 4
+HiddenLayer: 5
+OutputLayer: 3
+# Nodes
+Node_0 Bias: 0.11981311193692945
+Node_1 Bias: 0.6303145025469048
+Node_2 Bias: 0.16308523468295877
+Node_3 Bias: 0.5310297561841748
+Node_4 Bias: 0.8336379102768541
+Node_5 Bias: -0.13926366882473196
+Node_6 Bias: 0.3200458183348105
+Node_7 Bias: 0.4175981594248277
+Node_8 Bias: -0.6788173856924786
+Node_9 Bias: -0.3668265894387148
+Node_10 Bias: -0.6363794398727343
+Node_11 Bias: 0.3039643426614198
+# Connections
+Connection: 0 -> 4 Weight: 0.66744
+Connection: 1 -> 4 Weight: -0.19213
+Connection: 2 -> 4 Weight: -0.78866
+Connection: 3 -> 4 Weight: -0.76925
+Connection: 0 -> 5 Weight: -0.89631
+Connection: 1 -> 5 Weight: -0.94778
+Connection: 2 -> 5 Weight: 0.91561
+Connection: 3 -> 5 Weight: -0.97134
+Connection: 0 -> 6 Weight: -0.69821
+Connection: 1 -> 6 Weight: -0.12053
+Connection: 2 -> 6 Weight: -0.57664
+Connection: 3 -> 6 Weight: 0.33016
+Connection: 0 -> 7 Weight: 0.40743
+Connection: 1 -> 7 Weight: 0.96090
+Connection: 2 -> 7 Weight: -0.03985
+Connection: 3 -> 7 Weight: -0.77148
+Connection: 0 -> 8 Weight: 0.19052
+Connection: 1 -> 8 Weight: 0.48182
+Connection: 2 -> 8 Weight: -0.68299
+Connection: 3 -> 8 Weight: -0.68511
+Connection: 4 -> 9 Weight: 0.99122
+Connection: 5 -> 9 Weight: -0.80199
+Connection: 6 -> 9 Weight: 0.38016
+Connection: 7 -> 9 Weight: -0.67554
+Connection: 8 -> 9 Weight: 0.34734
+Connection: 4 -> 10 Weight: 0.35853
+Connection: 5 -> 10 Weight: -0.71286
+Connection: 6 -> 10 Weight: -0.69559
+Connection: 7 -> 10 Weight: -0.91765
+Connection: 8 -> 10 Weight: -0.77980
+Connection: 4 -> 11 Weight: 0.01671
+Connection: 5 -> 11 Weight: -0.34109
+Connection: 6 -> 11 Weight: 0.38860
+Connection: 7 -> 11 Weight: 0.46856
+Connection: 8 -> 11 Weight: -0.00972

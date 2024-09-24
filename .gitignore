@@ -50,3 +50,7 @@ modules.order
 Module.symvers
 Mkfile.old
 dkms.conf
+/FssSimpleML/obj
+/.vs
+/FssSimpleML_002/obj
+/FssSimpleML_002/bin
