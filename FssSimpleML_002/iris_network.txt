@@ -3,51 +3,51 @@ InputLayer: 4
 HiddenLayer: 5
 OutputLayer: 3
 # Nodes
-Node_0 Bias: 0.11981311193692945
-Node_1 Bias: 0.6303145025469048
-Node_2 Bias: 0.16308523468295877
-Node_3 Bias: 0.5310297561841748
-Node_4 Bias: 0.8336379102768541
-Node_5 Bias: -0.13926366882473196
-Node_6 Bias: 0.3200458183348105
-Node_7 Bias: 0.4175981594248277
-Node_8 Bias: -0.6788173856924786
-Node_9 Bias: -0.3668265894387148
-Node_10 Bias: -0.6363794398727343
-Node_11 Bias: 0.3039643426614198
+Node_0 Bias: 0.897039520387872
+Node_1 Bias: -0.4194208948032372
+Node_2 Bias: 0.697530090642601
+Node_3 Bias: -0.9666108240236349
+Node_4 Bias: 0.9136703104116688
+Node_5 Bias: 0.33125692214965663
+Node_6 Bias: 0.04940363942637882
+Node_7 Bias: -0.22920823351638386
+Node_8 Bias: 0.6777496921358075
+Node_9 Bias: -0.869170369903439
+Node_10 Bias: -0.3750997000393155
+Node_11 Bias: -0.9832255140034671
 # Connections
-Connection: 0 -> 4 Weight: 0.66744
-Connection: 1 -> 4 Weight: -0.19213
-Connection: 2 -> 4 Weight: -0.78866
-Connection: 3 -> 4 Weight: -0.76925
-Connection: 0 -> 5 Weight: -0.89631
-Connection: 1 -> 5 Weight: -0.94778
-Connection: 2 -> 5 Weight: 0.91561
-Connection: 3 -> 5 Weight: -0.97134
-Connection: 0 -> 6 Weight: -0.69821
-Connection: 1 -> 6 Weight: -0.12053
-Connection: 2 -> 6 Weight: -0.57664
-Connection: 3 -> 6 Weight: 0.33016
-Connection: 0 -> 7 Weight: 0.40743
-Connection: 1 -> 7 Weight: 0.96090
-Connection: 2 -> 7 Weight: -0.03985
-Connection: 3 -> 7 Weight: -0.77148
-Connection: 0 -> 8 Weight: 0.19052
-Connection: 1 -> 8 Weight: 0.48182
-Connection: 2 -> 8 Weight: -0.68299
-Connection: 3 -> 8 Weight: -0.68511
-Connection: 4 -> 9 Weight: 0.99122
-Connection: 5 -> 9 Weight: -0.80199
-Connection: 6 -> 9 Weight: 0.38016
-Connection: 7 -> 9 Weight: -0.67554
-Connection: 8 -> 9 Weight: 0.34734
-Connection: 4 -> 10 Weight: 0.35853
-Connection: 5 -> 10 Weight: -0.71286
-Connection: 6 -> 10 Weight: -0.69559
-Connection: 7 -> 10 Weight: -0.91765
-Connection: 8 -> 10 Weight: -0.77980
-Connection: 4 -> 11 Weight: 0.01671
-Connection: 5 -> 11 Weight: -0.34109
-Connection: 6 -> 11 Weight: 0.38860
-Connection: 7 -> 11 Weight: 0.46856
-Connection: 8 -> 11 Weight: -0.00972
+Connection: 0 -> 4 Weight: 0.7845677199515715
+Connection: 1 -> 4 Weight: 0.05626512896949909
+Connection: 2 -> 4 Weight: 0.5469909038144636
+Connection: 3 -> 4 Weight: -0.41130762702235213
+Connection: 0 -> 5 Weight: 0.07966307412534457
+Connection: 1 -> 5 Weight: 0.20783231243834144
+Connection: 2 -> 5 Weight: -0.3934940276592258
+Connection: 3 -> 5 Weight: 0.9843807907182813
+Connection: 0 -> 6 Weight: -0.1591769803619798
+Connection: 1 -> 6 Weight: 0.8151537063097176
+Connection: 2 -> 6 Weight: 0.7702706741812435
+Connection: 3 -> 6 Weight: 0.27045554131353233
+Connection: 0 -> 7 Weight: -0.5806671410446971
+Connection: 1 -> 7 Weight: -0.3767846630711753
+Connection: 2 -> 7 Weight: -0.5779259944616244
+Connection: 3 -> 7 Weight: -0.624730411112757
+Connection: 0 -> 8 Weight: -0.38397465738808023
+Connection: 1 -> 8 Weight: -0.5234912027942191
+Connection: 2 -> 8 Weight: 0.8743585234647397
+Connection: 3 -> 8 Weight: 0.8693778536287848
+Connection: 4 -> 9 Weight: -0.49870565417221124
+Connection: 5 -> 9 Weight: -0.8089936796438926
+Connection: 6 -> 9 Weight: -0.12646515484691
+Connection: 7 -> 9 Weight: 0.13018738242156092
+Connection: 8 -> 9 Weight: 0.35437549136108815
+Connection: 4 -> 10 Weight: 0.793092049168546
+Connection: 5 -> 10 Weight: 0.27002244964184197
+Connection: 6 -> 10 Weight: -0.11209796035031205
+Connection: 7 -> 10 Weight: 0.08277284955419928
+Connection: 8 -> 10 Weight: 0.2725565024745935
+Connection: 4 -> 11 Weight: 0.05115681103162539
+Connection: 5 -> 11 Weight: 0.5611900191757426
+Connection: 6 -> 11 Weight: -0.45813148262833203
+Connection: 7 -> 11 Weight: 0.9226514888194808
+Connection: 8 -> 11 Weight: -0.7369997971447446

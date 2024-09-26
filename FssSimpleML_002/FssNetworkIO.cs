@@ -31,7 +31,7 @@ public class FssNetworkIO
         for (int i = 0; i < network.Connections.Count; i++)
         {
             var connection = network.Connections[i];
-            sb.AppendLine($"Connection: {connection.FromNodeIndex} -> {connection.ToNodeIndex} Weight: {connection.Weight:F5}");
+            sb.AppendLine($"Connection: {connection.FromNodeIndex} -> {connection.ToNodeIndex} Weight: {connection.Weight}");
         }
 
         return sb.ToString();
@@ -92,14 +92,21 @@ public class FssNetworkIO
                     var parts = line.Split(' ');
                     if (parts.Length >= 6)
                     {
-                        int fromNodeIndex = int.Parse(parts[1]);
-                        int toNodeIndex = int.Parse(parts[3]);
+                        string nameStr   = parts[0];
+                        string startId   = parts[1];
+                        string arrow     = parts[2];
+                        string endId     = parts[3];
+                        string weightStr = parts[4];
+                        string weightVal = parts[5];
+
+                        int fromNodeIndex = int.Parse(startId);
+                        int toNodeIndex   = int.Parse(endId);
+                        double weight     = double.Parse(weightVal);
 
                         // Check if the node indices are valid
                         if (fromNodeIndex >= 0 && fromNodeIndex < nodes.Count &&
                             toNodeIndex >= 0 && toNodeIndex < nodes.Count)
                         {
-                            double weight = double.Parse(parts[5].Split(": ")[1]);
                             connections.Add(new FssConnection(fromNodeIndex, toNodeIndex, weight));
                         }
                         else
