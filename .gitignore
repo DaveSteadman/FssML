@@ -54,3 +54,5 @@ dkms.conf
 /.vs
 /FssSimpleML_002/obj
 /FssSimpleML_002/bin
+/MathNetDemo/obj
+/MathNetDemo/bin

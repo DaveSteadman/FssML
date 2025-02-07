@@ -2,13 +2,10 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Text.Json;
 
 public static class BPETokenizer
 {
-    /// <summary>
-    /// Build the initial vocabulary from an input string.
-    /// Each unique Unicode character (as a string) gets a unique integer ID.
-    /// </summary>
     public static Dictionary<string, int> BuildInitialVocabulary(string input)
     {
         Dictionary<string, int> vocab = new Dictionary<string, int>();
@@ -23,11 +20,10 @@ public static class BPETokenizer
         return vocab;
     }
 
+    // --------------------------------------------------------------------------------------------
+
     public static string VocabularyToString(Dictionary<string, int> vocab, int count)
     {
-        //tokens.OrderBy(_ => random.Next()).Take(100))
-
-
         var random = new Random();
 
         StringBuilder sb = new StringBuilder();
@@ -39,9 +35,8 @@ public static class BPETokenizer
         return sb.ToString();
     }
 
-    /// <summary>
-    /// Tokenizes the input string into a list of tokens (each token is a Unicode character).
-    /// </summary>
+    // --------------------------------------------------------------------------------------------
+
     public static List<string> Tokenize(string input)
     {
         List<string> tokens = new List<string>();
@@ -52,31 +47,23 @@ public static class BPETokenizer
         return tokens;
     }
 
-    /// <summary>
-    /// Returns a list of token IDs for the given token list using the provided vocabulary.
-    /// (For diagnostic purposes, since tokens are produced in order.)
-    /// </summary>
+    // --------------------------------------------------------------------------------------------
+
     public static List<int> GetTokenIds(List<string> tokens, Dictionary<string, int> vocab)
     {
         return tokens.Select(token => vocab.ContainsKey(token) ? vocab[token] : -1).ToList();
     }
 
-    /// <summary>
-    /// Prints the token sequence along with the corresponding token IDs.
-    /// </summary>
+    // --------------------------------------------------------------------------------------------
+
     public static void PrintTokensAndIds(List<string> tokens, Dictionary<string, int> vocab)
     {
         Console.WriteLine("Tokens: " + string.Join(" ", tokens));
         Console.WriteLine("Token IDs: " + string.Join(" ", GetTokenIds(tokens, vocab)));
     }
 
-    /// <summary>
-    /// Performs one iteration of BPE.
-    /// It examines the current token list, finds the most common adjacent pair,
-    /// creates a new token by concatenating the pair, adds it to the vocabulary if needed,
-    /// and replaces every occurrence of that pair in the token list with the new token.
-    /// Returns a tuple containing the new token list and a new vocabulary dictionary.
-    /// </summary>
+    // --------------------------------------------------------------------------------------------
+
     public static (List<string> newTokens, Dictionary<string, int> newVocab) ApplyBPEIteration(List<string> tokens, Dictionary<string, int> vocab, int merges = 10)
     {
         // Count frequency of adjacent token pairs.
@@ -131,13 +118,8 @@ public static class BPETokenizer
         return (newTokens, new Dictionary<string, int>(vocab));
     }
 
+    // --------------------------------------------------------------------------------------------
 
-
-
-    /// <summary>
-    /// Tokenizes an input string using the current vocabulary.
-    /// This function uses a greedy longest-match approach.
-    /// </summary>
     public static List<string> TokenizeUsingVocabulary(string input, Dictionary<string, int> vocab)
     {
         List<string> tokens = new List<string>();
@@ -168,6 +150,60 @@ public static class BPETokenizer
             }
         }
         return tokens;
+    }
+
+    // --------------------------------------------------------------------------------------------
+
+    public static List<int> TokenIdsUsingVocabulary(string input, Dictionary<string, int> vocab)
+    {
+        return GetTokenIds(TokenizeUsingVocabulary(input, vocab), vocab);
+    }
+
+    // --------------------------------------------------------------------------------------------
+    // MARK: Manage
+    // --------------------------------------------------------------------------------------------
+
+    public static Dictionary<string, int> LimitVocabSize(Dictionary<string, int> vocab, int maxSize)
+    {
+        // Sort the vocabulary by frequency.
+        var sortedVocab = vocab.OrderBy(pair => pair.Value)
+                       .ToDictionary(pair => pair.Key, pair => pair.Value);
+
+        // Take the top 'maxSize' tokens.
+        return sortedVocab.Take(maxSize).ToDictionary(pair => pair.Key, pair => pair.Value);
+    }
+
+    // --------------------------------------------------------------------------------------------
+    // MARK: Load Save
+    // --------------------------------------------------------------------------------------------
+    // New methods to save and load the vocabulary.
+
+    public static void SaveVocabularyToFile(Dictionary<string, int> vocab, string filePath)
+    {
+        // Create options for human-readable (indented) JSON.
+        var options = new JsonSerializerOptions { WriteIndented = true };
+
+        // Serialize the vocabulary to a JSON string.
+        string json = JsonSerializer.Serialize(vocab, options);
+
+        // Write the JSON string to the specified file.
+        File.WriteAllText(filePath, json);
+    }
+
+    // --------------------------------------------------------------------------------------------
+
+    public static Dictionary<string, int> LoadVocabularyFromFile(string filePath)
+    {
+        // Read the JSON string from the specified file.
+        string json = File.ReadAllText(filePath);
+
+        // Deserialize the JSON string back into a dictionary.
+        Dictionary<string, int>? newDict = JsonSerializer.Deserialize<Dictionary<string, int>>(json);
+
+        if (newDict == null)
+            return new Dictionary<string, int>();
+
+        return newDict;
     }
 }
 
