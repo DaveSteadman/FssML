@@ -15,6 +15,7 @@
 // Codespace Commands
 // ==================
 // git commit -am "recent progress"
+// git push
 
 using System;
 using System.Collections.Generic;
@@ -238,54 +239,61 @@ namespace MathNetDemo
             Dictionary<string, int> vocabulary = BPETokenizer.LoadVocabularyFromFile("./vocab.json");
             int vocabSize    = vocabulary.Count;
             int embeddingDim = 16; // as chosen for embeddings and self-attention
+            int numTokens    = 10;    // number of tokens (rows) to simulate
 
-            // Set up the embedding layer and self-attention layer.
-            // (Here we assume these classes have been implemented elsewhere.)
-            EmbeddingLayer embeddingLayer = new EmbeddingLayer(vocabSize, embeddingDim);
-
-            // For demonstration, we initialize the embeddings randomly.
-            embeddingLayer.SetRandom(-0.2f, 0.2f);
-
-            // Save or load as needed:
-            // EmbeddingLayer.Save(embeddingLayer, "./embeddings.json");
-
-            SelfAttention selfAttention = new SelfAttention(embeddingDim);
+            EmbeddingLayer embeddingLayer = EmbeddingLayer.Load("./embeddings.json");
+            SelfAttention  selfAttention  = SelfAttention.Load("./self-attention.json");
 
             // Load input string and tokenize.
             string input = File.ReadAllText("SampleStr.txt");
-            List<string> tokList   = BPETokenizer.TokenizeUsingVocabulary(input, vocabulary);
-            List<int>    tokIdList = BPETokenizer.TokenIdsUsingVocabulary(input, vocabulary);
-            int numTokens = 10;  // For demo, process 10 tokens
+            List<string> tokList     = BPETokenizer.TokenizeUsingVocabulary(input, vocabulary);
+            List<int>    tokIdList   = BPETokenizer.TokenIdsUsingVocabulary(input, vocabulary);
+
+            // Debug print the first 15 tokens and their IDs
+            for (int i = 0; i < numTokens; i++)
+            {
+                Console.Write($"[{tokList[i]}: {tokIdList[i]}] ");
+            }
+            Console.WriteLine();
+
+            // Take the first 'numTokens' tokens to process.
             List<int> tokenIdsSub = tokIdList.Take(numTokens).ToList();
 
-            // Look up embeddings and form the input matrix.
+            // Look up embeddings and form the input matrix of shape (numTokens, embeddingDim).
             List<VectorF> embList = embeddingLayer.LookupList(tokenIdsSub);
             MatrixF inputMatrix = DenseMatrix.OfRowVectors(embList);
 
             // Self-attention forward pass.
+            // Takes in and outputs a matrix of shape (numTokens, embeddingDim).
             MatrixF selfAttOutput = selfAttention.Forward(inputMatrix);
+
+            // Validate the shape of the output matrix.
+            Console.WriteLine($"Self-attention output: {selfAttOutput.RowCount} x {selfAttOutput.ColumnCount}");
 
             // Create the dense layer to project from embeddingDim to vocabSize.
             DenseLayer denseLayer = new DenseLayer(embeddingDim, vocabSize);
+
             // Compute logits: each row corresponds to a token, and has vocabSize columns.
             MatrixF logits = denseLayer.Forward(selfAttOutput);
 
             // Optionally, apply softmax to get probability distributions.
             MatrixF probabilities = DenseLayer.Softmax(logits);
 
-            // For each token, pick the predicted vocabulary index (argmax)
-            // and convert that into a one-hot vector.
-            for (int i = 0; i < probabilities.RowCount; i++)
-            {
-                VectorF probRow = probabilities.Row(i);
-                int predictedIndex = ArgMax(probRow);
-                Console.WriteLine($"Token {i}: predicted vocab index {predictedIndex}");
+            // Select the last token's probability distribution.
+            VectorF lastTokenProbabilities = probabilities.Row(probabilities.RowCount - 1);
 
-                // Create a one-hot vector for display.
-                VectorF oneHot = DenseVector.Create(vocabSize, 0f);
-                oneHot[predictedIndex] = 1f;
-                Console.WriteLine("One-hot prediction: " + oneHot.ToString());
+            // Compute the argmax of the last token's probabilities.
+            int predictedIndex = ArgMax(lastTokenProbabilities);
+
+            // Optionally, convert the predicted index back into a token string.
+            // Since your vocabulary is a Dictionary<string, int>, we can search for the matching key.
+            string predictedToken = vocabulary.FirstOrDefault(kvp => kvp.Value == predictedIndex).Key;
+            if (predictedToken == null)
+            {
+                predictedToken = "<unk>";
             }
+
+            Console.WriteLine($"Predicted next token (index {predictedIndex}): {predictedToken}");
         }
 
         // Helper method to compute the index of the maximum element in a vector.
@@ -309,9 +317,9 @@ namespace MathNetDemo
         {
             //DemoBPE();
             //DemoMatrix();
-            DemoEmbeddings();
+            //DemoEmbeddings();
             //DemoSelfAttention();
-            //DemoDenseOutput();
+            DemoDenseOutput();
         }
     }
 }

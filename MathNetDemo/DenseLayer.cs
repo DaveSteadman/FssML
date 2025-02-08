@@ -9,21 +9,19 @@ using MathNet.Numerics.LinearAlgebra.Single;
 using MatrixF = MathNet.Numerics.LinearAlgebra.Matrix<float>;  // Alias for Matrix<float>
 using VectorF = MathNet.Numerics.LinearAlgebra.Vector<float>;  // Alias for Vector<float>
 
-
 public class DenseLayer
 {
-    public int InputDim { get; }
-    public int OutputDim { get; }
-    public MatrixF Weights { get; }
-    public VectorF Biases { get; }
+    public int     InputDim  { get; }
+    public int     OutputDim { get; }
+    public MatrixF Weights   { get; }
+    public VectorF Biases    { get; }
 
     public DenseLayer(int inputDim, int outputDim)
     {
-        InputDim = inputDim;
+        InputDim  = inputDim;
         OutputDim = outputDim;
         // Initialize the weight matrix randomly in [-0.1, 0.1]
         //Weights = DenseMatrix.CreateRandom<float>(            inputDim, outputDim,            new ContinuousUniform(-0.1f, 0.1f));
-
 
         Weights = DenseMatrix.CreateRandom(inputDim, outputDim, new ContinuousUniform(-0.1f, 0.1f));
 
