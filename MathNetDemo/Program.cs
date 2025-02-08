@@ -17,7 +17,7 @@ using System.Collections.Generic;
 
 using MathNet.Numerics.Distributions;
 using MathNet.Numerics.LinearAlgebra;
-//using MathNet.Numerics.LinearAlgebra.Double;
+using MathNet.Numerics.LinearAlgebra.Single;
 
 using MatrixF = MathNet.Numerics.LinearAlgebra.Matrix<float>;  // Alias for Matrix<float>
 using VectorF = MathNet.Numerics.LinearAlgebra.Vector<float>;  // Alias for Vector<float>
@@ -84,36 +84,36 @@ namespace MathNetDemo
         {
             // VECTOR OPERATIONS
             // Create two vectors using DenseVector
-            Vector<double> vectorA = DenseVector.OfArray(new double[] { 1.0, 2.0, 3.0 });
-            Vector<double> vectorB = DenseVector.OfArray(new double[] { 4.0, 5.0, 6.0 });
+            Vector<float> vectorA = DenseVector.OfArray(new float[] { 1.0f, 2.0f, 3.0f });
+            Vector<float> vectorB = DenseVector.OfArray(new float[] { 4.0f, 5.0f, 6.0f });
 
             // Compute the dot product of vectorA and vectorB
-            double dotProduct = vectorA.DotProduct(vectorB);
+            float dotProduct = vectorA.DotProduct(vectorB);
             Console.WriteLine("Dot Product of vectorA and vectorB: " + dotProduct);
 
             // MATRIX OPERATIONS
             // Create a 2x3 matrix (matrixA)
-            Matrix<double> matrixA = DenseMatrix.OfArray(new double[,] {
+            Matrix<float> matrixA = DenseMatrix.OfArray(new float[,] {
                 { 1, 2, 3 },
                 { 4, 5, 6 }
             });
 
             // Create a 3x2 matrix (matrixB)
-            Matrix<double> matrixB = DenseMatrix.OfArray(new double[,] {
+            Matrix<float> matrixB = DenseMatrix.OfArray(new float[,] {
                 { 7, 8 },
                 { 9, 10 },
                 { 11, 12 }
             });
 
             // Multiply matrixA by matrixB resulting in a 2x2 matrix
-            Matrix<double> matrixProduct = matrixA * matrixB;
+            Matrix<float> matrixProduct = matrixA * matrixB;
             Console.WriteLine("Result of matrixA * matrixB:");
             Console.WriteLine(matrixProduct.ToString());
 
             // VECTOR-MATRIX MULTIPLICATION
             // Multiply matrixA (2x3) by a 3-element vector
-            Vector<double> vectorC = DenseVector.OfArray(new double[] { 1, 2, 3 });
-            Vector<double> resultVector = matrixA * vectorC;
+            Vector<float> vectorC = DenseVector.OfArray(new float[] { 1, 2, 3 });
+            Vector<float> resultVector = matrixA * vectorC;
             Console.WriteLine("Result of matrixA * vectorC:");
             Console.WriteLine(resultVector.ToString());
         }
@@ -165,8 +165,6 @@ namespace MathNetDemo
 
         public static void DemoSelfAttention()
         {
-
-
             // Load the vocabulary
             Dictionary<string, int> vocabulary = BPETokenizer.LoadVocabularyFromFile("./vocab.json");
 
@@ -211,36 +209,93 @@ namespace MathNetDemo
                     Console.Write($"[{tokList[i]}: {tokIdList[i]}] ");
                 }
 
+                // Perform self-attention on the input matrix
+                MatrixF outputMatrix = selfAttention.Forward(inputMatrix);
+
+                // Report the output matrix dimensions
+                Console.WriteLine($"Output matrix: {outputMatrix.RowCount} x {outputMatrix.ColumnCount}");
             }
-
-            // // Perform self-attention on the input matrix
-            // MatrixF outputMatrix = selfAttention.Forward(inputMatrix);
-
-            // // Save the self-attention layer
-            // SelfAttention.Save(selfAttention, "./self-attention.json");
-            // Console.WriteLine("Self-attention layer saved to file.");
-
-            // // Load the self-attention layer
-            // SelfAttention loadedLayer = SelfAttention.Load("./self-attention.json");
-            // Console.WriteLine("Self-attention layer loaded from file.");
-
-            // // Perform self-attention on the input matrix
-            // MatrixF loadedOutputMatrix = loadedLayer.Forward(inputMatrix);
-
-            // // Compare the output matrices
-            // Console.WriteLine("Output matrices are equal: " + outputMatrix.Equals(loadedOutputMatrix));
-
-
 
             SelfAttention.Save(selfAttention, "./self-attention.json");
         }
+
+        public static void DemoDenseOutput()
+        {
+            // Load vocabulary from file.
+            Dictionary<string, int> vocabulary = BPETokenizer.LoadVocabularyFromFile("./vocab.json");
+            int vocabSize    = vocabulary.Count;
+            int embeddingDim = 16; // as chosen for embeddings and self-attention
+
+            // Set up the embedding layer and self-attention layer.
+            // (Here we assume these classes have been implemented elsewhere.)
+            EmbeddingLayer embeddingLayer = new EmbeddingLayer(vocabSize, embeddingDim);
+            // For demonstration, we initialize the embeddings randomly.
+            embeddingLayer.SetRandom(-0.2f, 0.2f);
+            // Save or load as needed:
+            // EmbeddingLayer.Save(embeddingLayer, "./embeddings.json");
+
+            SelfAttention selfAttention = new SelfAttention(embeddingDim);
+
+            // Load input string and tokenize.
+            string input = File.ReadAllText("SampleStr.txt");
+            List<string> tokList   = BPETokenizer.TokenizeUsingVocabulary(input, vocabulary);
+            List<int>    tokIdList = BPETokenizer.TokenIdsUsingVocabulary(input, vocabulary);
+            int numTokens = 10;  // For demo, process 10 tokens
+            List<int> tokenIdsSub = tokIdList.Take(numTokens).ToList();
+
+            // Look up embeddings and form the input matrix.
+            List<VectorF> embList = embeddingLayer.LookupList(tokenIdsSub);
+            MatrixF inputMatrix = DenseMatrix.OfRowVectors(embList);
+
+            // Self-attention forward pass.
+            MatrixF selfAttOutput = selfAttention.Forward(inputMatrix);
+
+            // Create the dense layer to project from embeddingDim to vocabSize.
+            DenseLayer denseLayer = new DenseLayer(embeddingDim, vocabSize);
+            // Compute logits: each row corresponds to a token, and has vocabSize columns.
+            MatrixF logits = denseLayer.Forward(selfAttOutput);
+
+            // Optionally, apply softmax to get probability distributions.
+            MatrixF probabilities = DenseLayer.Softmax(logits);
+
+            // For each token, pick the predicted vocabulary index (argmax)
+            // and convert that into a one-hot vector.
+            for (int i = 0; i < probabilities.RowCount; i++)
+            {
+                VectorF probRow = probabilities.Row(i);
+                int predictedIndex = ArgMax(probRow);
+                Console.WriteLine($"Token {i}: predicted vocab index {predictedIndex}");
+
+                // Create a one-hot vector for display.
+                VectorF oneHot = DenseVector.Create(vocabSize, 0f);
+                oneHot[predictedIndex] = 1f;
+                Console.WriteLine("One-hot prediction: " + oneHot.ToString());
+            }
+        }
+
+        // Helper method to compute the index of the maximum element in a vector.
+        public static int ArgMax(VectorF v)
+        {
+            int maxIndex = 0;
+            float maxVal = v[0];
+            for (int i = 1; i < v.Count; i++)
+            {
+                if (v[i] > maxVal)
+                {
+                    maxVal = v[i];
+                    maxIndex = i;
+                }
+            }
+            return maxIndex;
+        }
+
 
         static void Main(string[] args)
         {
             //DemoBPE();
             //DemoMatrix();
             //DemoEmbeddings();
-            DemoSelfAttention();
+            DemoDenseOutput();
         }
     }
 }
