@@ -58,7 +58,7 @@ namespace MathNetDemo
                 (tokens, vocabulary) = BPETokenizer.ApplyBPEIteration(tokens, vocabulary);
 
                 // Break out of the loop if the vocabulary meets a target number
-                if (vocabulary.Count >= 1000)
+                if (vocabulary.Count >= 1200)
                 {
                     Console.WriteLine($"Complete: {vocabulary.Count} tokens after {i + 1} iterations");
                     break;
@@ -74,7 +74,13 @@ namespace MathNetDemo
             Console.WriteLine($"Initial vocabulary: {vocabulary.Count} tokens");
             Console.WriteLine(string.Join(" ", tokens.Take(100)));
 
-            Dictionary<string, int> vocabTrimmed = BPETokenizer.LimitVocabSize(vocabulary, 1000);
+            // A save/load/save cycle flushes out probe tokens in the dictionary, such as control characters.
+            // We then trim to the right length.
+            // Any token we can't find will be replaced with the <unk> token.
+
+            BPETokenizer.SaveVocabularyToFile(vocabulary, "./vocab.json");
+            Dictionary<string, int> vocabLoaded = BPETokenizer.LoadVocabularyFromFile("./vocab.json");
+            Dictionary<string, int> vocabTrimmed = BPETokenizer.LimitVocabSize(vocabLoaded, 1000);
             BPETokenizer.SaveVocabularyToFile(vocabTrimmed, "./vocab.json");
         }
 
@@ -134,27 +140,30 @@ namespace MathNetDemo
             List<string> tokList   = BPETokenizer.TokenizeUsingVocabulary(input, vocabulary);
             List<int>    tokIdList = BPETokenizer.TokenIdsUsingVocabulary(input, vocabulary);
 
+            Console.WriteLine($"Vocabulary size: {vocabSize}, Embedding dimension: {embeddingDim}");
+
             // Create an embedding layer using Single precision.
             EmbeddingLayer embeddingLayer = new EmbeddingLayer(vocabSize, embeddingDim);
             embeddingLayer.SetRandom(-0.5f, 0.5f);
 
+            // Debug print the first 15 tokens and their IDs
             int numToks = 15;
             for (int i = 0; i < numToks; i++)
             {
                 Console.Write($"[{tokList[i]}: {tokIdList[i]}] ");
             }
+            Console.WriteLine();
 
-            // Create a sub-list of the first 50 tokens IDs
-            List<int> tokenIds = tokIdList.Take(5).ToList();
-
-            // Look up embeddings for these token IDs.
-            List<VectorF> embeddings = embeddingLayer.LookupList(tokenIds);
-
-            Console.WriteLine("Embeddings for token IDs:");
-            for (int i = 0; i < tokenIds.Count; i++)
+            // Generate embeddings for every token in the vocabulary
+            List<VectorF> embeddings = new List<VectorF>();
+            foreach (var token in vocabulary.Keys)
+            for (int i = 0; i < vocabSize; i++)
             {
-                Console.WriteLine($"Token ID {tokenIds[i]}: {embeddings[i].ToString()}");
+                int tokenId = i; // vocabulary[token];
+                VectorF embedding = embeddingLayer.Lookup(tokenId);
+                embeddings.Add(embedding);
             }
+            Console.WriteLine($"Embeddings for tokens (count: {embeddings.Count}):");
 
             // Save the embeddings
             EmbeddingLayer.Save(embeddingLayer, "./embeddings.json");
@@ -229,8 +238,10 @@ namespace MathNetDemo
             // Set up the embedding layer and self-attention layer.
             // (Here we assume these classes have been implemented elsewhere.)
             EmbeddingLayer embeddingLayer = new EmbeddingLayer(vocabSize, embeddingDim);
+
             // For demonstration, we initialize the embeddings randomly.
             embeddingLayer.SetRandom(-0.2f, 0.2f);
+
             // Save or load as needed:
             // EmbeddingLayer.Save(embeddingLayer, "./embeddings.json");
 
@@ -294,8 +305,9 @@ namespace MathNetDemo
         {
             //DemoBPE();
             //DemoMatrix();
-            //DemoEmbeddings();
-            DemoDenseOutput();
+            DemoEmbeddings();
+            //DemoSelfAttention();
+            //DemoDenseOutput();
         }
     }
 }

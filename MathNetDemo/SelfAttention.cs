@@ -26,6 +26,8 @@ public class SelfAttention
     // A random number generator for weight initialization.
     private static readonly Random random = new Random();
 
+    // --------------------------------------------------------------------------------------------
+
     // Creates a new self-attention layer with the given model dimensionality.
     // modelDim: The size of the model and each token’s embedding vector.</param>
     public SelfAttention(int modelDim)

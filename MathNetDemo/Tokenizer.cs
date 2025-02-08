@@ -4,11 +4,16 @@ using System.Linq;
 using System.Text;
 using System.Text.Json;
 
+// BPETokenizer: A functional class providing methods to tokenize text and build a vocabulary.
+// - Dictionary<string, int> is the vocab dictionary data structure.
+
 public static class BPETokenizer
 {
     public static Dictionary<string, int> BuildInitialVocabulary(string input)
     {
         Dictionary<string, int> vocab = new Dictionary<string, int>();
+
+        AddInitialTokens(vocab);
         foreach (char c in input)
         {
             string token = c.ToString();
@@ -18,6 +23,27 @@ public static class BPETokenizer
             }
         }
         return vocab;
+    }
+
+    // --------------------------------------------------------------------------------------------
+
+    private static void AddInitialTokens(Dictionary<string, int> vocab)
+    {
+        // Add special tokens for padding, unknown tokens, and beginning/end of sentence.
+        vocab["<PAD>"] = vocab.Count;
+        vocab["<UNK>"] = vocab.Count;
+        vocab["<EOS>"] = vocab.Count;
+
+        string defaultChars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+
+        foreach (char c in defaultChars)
+        {
+            string token = c.ToString();
+            if (!vocab.ContainsKey(token))
+            {
+                vocab[token] = vocab.Count; // assign next available ID
+            }
+        }
     }
 
     // --------------------------------------------------------------------------------------------
