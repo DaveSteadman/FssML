@@ -12,6 +12,10 @@
 // dotnet workload search
 // dotnet workload update
 
+// Codespace Commands
+// ==================
+// git commit -am "recent progress"
+
 using System;
 using System.Collections.Generic;
 
