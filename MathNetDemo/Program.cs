@@ -15,6 +15,7 @@
 // Codespace Commands
 // ==================
 // git commit -am "recent progress"
+// git add <filename>
 // git push
 
 using System;
@@ -242,7 +243,11 @@ namespace MathNetDemo
             int numTokens    = 10;    // number of tokens (rows) to simulate
 
             EmbeddingLayer embeddingLayer = EmbeddingLayer.Load("./embeddings.json");
-            SelfAttention  selfAttention  = SelfAttention.Load("./self-attention.json");
+
+            SelfAttention  selfAttention = new SelfAttention(embeddingDim);
+            selfAttention.SetRandomWeights(-0.1f, 0.1f);
+
+            //SelfAttention  selfAttention  = SelfAttention.Load("./self-attention.json");
 
             // Load input string and tokenize.
             string input = File.ReadAllText("SampleStr.txt");
@@ -270,14 +275,21 @@ namespace MathNetDemo
             // Validate the shape of the output matrix.
             Console.WriteLine($"Self-attention output: {selfAttOutput.RowCount} x {selfAttOutput.ColumnCount}");
 
+
+
+
             // Create the dense layer to project from embeddingDim to vocabSize.
-            DenseLayer denseLayer = new DenseLayer(embeddingDim, vocabSize);
+            OutputProjectionLayer denseLayer = new OutputProjectionLayer(embeddingDim, vocabSize);
+            OutputProjectionLayer.Save(denseLayer, "./output-projection-layer.json");
+            OutputProjectionLayer denseLayer2 = OutputProjectionLayer.Load("./output-projection-layer.json");
 
             // Compute logits: each row corresponds to a token, and has vocabSize columns.
             MatrixF logits = denseLayer.Forward(selfAttOutput);
 
+
+
             // Optionally, apply softmax to get probability distributions.
-            MatrixF probabilities = DenseLayer.Softmax(logits);
+            MatrixF probabilities = OutputProjectionLayer.Softmax(logits);
 
             // Select the last token's probability distribution.
             VectorF lastTokenProbabilities = probabilities.Row(probabilities.RowCount - 1);

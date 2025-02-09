@@ -46,6 +46,43 @@ public class SelfAttention
 
     // --------------------------------------------------------------------------------------------
 
+    public void SetRandomWeights(float min, float max)
+    {
+        // Create a uniform distribution for small random initialization.
+        var uniform = new ContinuousUniform(min, max);
+
+        // Initialize weight matrices.
+        W_q = DenseMatrix.Build.Random(ModelDim, ModelDim, uniform);
+        W_k = DenseMatrix.Build.Random(ModelDim, ModelDim, uniform);
+        W_v = DenseMatrix.Build.Random(ModelDim, ModelDim, uniform);
+        W_o = DenseMatrix.Build.Random(ModelDim, ModelDim, uniform);
+    }
+
+    public void ApplyRandomOffset(float absOffset)
+    {
+        // The offset for each value is plus/minus a random value in the range [-absOffset, absOffset].
+        // A different offset is applied to each value in each matrix.
+
+        // Apply the offset to each element in each matrix.
+        ApplyOffset(W_q, absOffset);
+        ApplyOffset(W_k, absOffset);
+        ApplyOffset(W_v, absOffset);
+    }
+
+    private void ApplyOffset(MatrixF w, float absOffset)
+    {
+        // Create a continuous uniform distribution for the offset.
+        var uniformOffset = new ContinuousUniform(-absOffset, absOffset);
+
+        // Generate a matrix of the same dimensions filled with random offsets.
+        MatrixF offsetMatrix = DenseMatrix.Build.Random(w.RowCount, w.ColumnCount, uniformOffset);
+
+        // Add the offset matrix to the weight matrix.
+        w.Add(offsetMatrix, result: w); // The 'result: w' performs an in-place addition.
+    }
+
+    // --------------------------------------------------------------------------------------------
+
     public int ParamCount()
     {
         return W_q.RowCount * W_q.ColumnCount +
