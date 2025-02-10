@@ -14,7 +14,7 @@
 
 // Codespace Commands
 // ==================
-// git commit -am "new vocab progress"
+// git commit -am "consistency"
 // git add <filename>
 // git push
 
