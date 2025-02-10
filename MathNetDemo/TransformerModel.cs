@@ -15,7 +15,7 @@ using VectorF = MathNet.Numerics.LinearAlgebra.Vector<float>;
 public class TransformerModel
 {
     public string     DirPath { get; set; } = "";
-    public Vocabulary Vocab   { get; set; }
+    public TokenVocab Vocab   { get; set; }
 
     public TransformerModel(string dirPath)
     {
@@ -53,7 +53,7 @@ public class TransformerModel
         string vocabPath = Path.Combine(modelPath, "vocab.json");
 
         // Load the model parameters from a JSON file.
-        model.Vocab = Vocabulary.LoadFromFile(vocabPath);
+        model.Vocab = TokenVocab.LoadFromFile(vocabPath);
 
         return model;
     }

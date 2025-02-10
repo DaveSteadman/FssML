@@ -14,7 +14,7 @@
 
 // Codespace Commands
 // ==================
-// git commit -am "recent progress"
+// git commit -am "new vocab progress"
 // git add <filename>
 // git push
 
@@ -32,6 +32,11 @@ namespace MathNetDemo
 {
     class Program
     {
+
+        // --------------------------------------------------------------------------------------------
+        // MARK: v0.1
+        // --------------------------------------------------------------------------------------------
+
         public static void DemoBPE()
         {
             // Load the input string from file
@@ -324,6 +329,84 @@ namespace MathNetDemo
             return maxIndex;
         }
 
+        // --------------------------------------------------------------------------------------------
+        // MARK: v0.2
+        // --------------------------------------------------------------------------------------------
+
+        static void DemoTokenVocab()
+        {
+            Console.WriteLine("- - - DemoTokenVocab - - - - - -");
+
+            TokenVocab vocab = new ();
+            vocab.SaveToFile("./vocab2.json");
+
+            // Load the input string from file
+            string input = File.ReadAllText("SampleStr.txt");
+
+            int currIterationcount = 0;
+            int prevCount = 0;
+            while (vocab.Count < 1080)
+            {
+                vocab.ApplyBPEIteration(input, 30);
+                Console.Write($"{vocab.Count} ");
+
+                // Break out of the loop in case we aren't making progress, either but loops or by count
+                if (currIterationcount > 500) break;
+                if (vocab.Count == prevCount) break;
+                currIterationcount++;
+                prevCount = vocab.Count;
+            }
+            vocab.SaveToFile("./vocab2.json");
+            TokenVocab.PerformLimitSizePass("./vocab2.json", 1000);
+        }
+
+        // --------------------------------------------------------------------------------------------
+
+        public static void DemoEmbeddings2()
+        {
+            Console.WriteLine("- - - DemoEmbeddings2 - - - - - -");
+
+            // Load vocab
+            TokenVocab tokenVocab = TokenVocab.LoadFromFile("./vocab2.json");
+
+            // Example: Assume your BPE tokenizer produced a vocabulary of 100 tokens.
+            int vocabSize    = tokenVocab.Count;
+            int embeddingDim = 16;  // Choose the embedding dimension as a hyperparameter.
+
+            // Load the input string from file
+            string input = File.ReadAllText("SampleStr.txt");
+            List<string> tokList   = tokenVocab.TokenizeToStrings(input);
+            List<int>    tokIdList = tokenVocab.TokenizeToIds(input);
+
+            Console.WriteLine($"Vocabulary size: {vocabSize}, Embedding dimension: {embeddingDim}");
+
+            // Create an embedding layer using Single precision.
+            EmbeddingLayer embeddingLayer = new EmbeddingLayer(vocabSize, embeddingDim);
+            embeddingLayer.SetRandom(-0.5f, 0.5f);
+            embeddingLayer.Normalize(-0.1f, 0.1f);
+
+            // Debug print the first 15 tokens and their IDs
+            int numToks = 15;
+            for (int i = 0; i < numToks; i++)
+            {
+                Console.Write($"[{tokList[i]}: {tokIdList[i]}] ");
+            }
+            Console.WriteLine();
+
+            // Write the embeddings for the first token ID.
+            VectorF embedding = embeddingLayer.Lookup(tokIdList[0]);
+            Console.WriteLine("");
+            Console.WriteLine($"Embedding for token ID {tokIdList[0]}:");
+            Console.WriteLine(embedding.ToString());
+
+            // Save the embeddings
+            EmbeddingLayer.Save(embeddingLayer, "./embeddings.json");
+            Console.WriteLine($"Embeddings saved to file. Total {embeddingLayer.ParamCount()} parameters.");
+        }
+
+        // --------------------------------------------------------------------------------------------
+        // MARK: Main
+        // --------------------------------------------------------------------------------------------
 
         static void Main(string[] args)
         {
@@ -331,7 +414,10 @@ namespace MathNetDemo
             //DemoMatrix();
             //DemoEmbeddings();
             //DemoSelfAttention();
-            DemoDenseOutput();
+            //DemoDenseOutput();
+
+            //DemoTokenVocab();
+            DemoEmbeddings2();
         }
     }
 }
