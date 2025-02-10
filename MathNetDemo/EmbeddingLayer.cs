@@ -65,8 +65,15 @@ public class EmbeddingLayer
     }
 
     // An evolution of LookupList, returning a matrix of tokens x embeddings rather than a list of embeddings.
-    public MatrixF LookupList2(List<int> tokenIds)
+    public MatrixF LookupListToMatrix(List<int> tokenIds)
     {
+        // Write out the size params for debugging purposes.
+        Console.WriteLine("VocabSize: " + VocabSize);
+        Console.WriteLine("EmbeddingDim: " + EmbeddingDim);
+        Console.WriteLine("tokenIds.Count: " + tokenIds.Count);
+
+
+        Console.WriteLine("LookupList2");
         MatrixF embeddings = DenseMatrix.Build.Dense(tokenIds.Count, EmbeddingDim);
         for (int i = 0; i < tokenIds.Count; i++)
         {
@@ -107,17 +114,19 @@ public class EmbeddingLayer
 
     public void Normalize(float min, float max)
     {
-        float minVal = EmbeddingMatrix.Enumerate().Min();
-        float maxVal = EmbeddingMatrix.Enumerate().Max();
-        float range  = maxVal - minVal;
+        // float minVal = EmbeddingMatrix.Enumerate().Min();
+        // float maxVal = EmbeddingMatrix.Enumerate().Max();
+        // float range  = maxVal - minVal;
 
-        for (int i = 0; i < VocabSize; i++)
-        {
-            for (int j = 0; j < EmbeddingDim; j++)
-            {
-                EmbeddingMatrix[i, j] = (EmbeddingMatrix[i, j] - minVal) / range * (max - min) + min;
-            }
-        }
+        // for (int i = 0; i < VocabSize; i++)
+        // {
+        //     for (int j = 0; j < EmbeddingDim; j++)
+        //     {
+        //         EmbeddingMatrix[i, j] = (EmbeddingMatrix[i, j] - minVal) / range * (max - min) + min;
+        //     }
+        // }
+
+        EmbeddingMatrix.TanhNormalize();
     }
 
     // --------------------------------------------------------------------------------------------

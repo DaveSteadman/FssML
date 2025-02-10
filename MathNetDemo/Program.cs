@@ -313,21 +313,21 @@ namespace MathNetDemo
         //     Console.WriteLine($"Predicted next token (index {predictedIndex}): {predictedToken}");
         // }
 
-        // // Helper method to compute the index of the maximum element in a vector.
-        // public static int ArgMax(VectorF v)
-        // {
-        //     int maxIndex = 0;
-        //     float maxVal = v[0];
-        //     for (int i = 1; i < v.Count; i++)
-        //     {
-        //         if (v[i] > maxVal)
-        //         {
-        //             maxVal = v[i];
-        //             maxIndex = i;
-        //         }
-        //     }
-        //     return maxIndex;
-        // }
+        // Helper method to compute the index of the maximum element in a vector.
+        public static int ArgMax(VectorF v)
+        {
+            int maxIndex = 0;
+            float maxVal = v[0];
+            for (int i = 1; i < v.Count; i++)
+            {
+                if (v[i] > maxVal)
+                {
+                    maxVal = v[i];
+                    maxIndex = i;
+                }
+            }
+            return maxIndex;
+        }
 
         // --------------------------------------------------------------------------------------------
         // MARK: v0.2
@@ -436,7 +436,7 @@ namespace MathNetDemo
             Console.WriteLine();
 
             // Get and output the embedding for token Id list
-            MatrixF embeddingMatrix = embeddingLayer.LookupList2(tokIdList);
+            MatrixF embeddingMatrix = embeddingLayer.LookupListToMatrix(inputTokIdList);
 
             // debug print the first row, for token 0
             Console.WriteLine("");
@@ -474,6 +474,36 @@ namespace MathNetDemo
             Console.WriteLine("Normalized Combined Embeddings:");
             Console.WriteLine(normalizedCombinedEmbeddings.ToString());
 
+            SelfAttention selfAttention = new SelfAttention(embeddingDim);
+            selfAttention.SaveToFile("./self-attention.json");
+
+            MatrixF selfAttOutput = selfAttention.Forward(combinedEmbeddings);
+
+            Console.WriteLine("");
+            Console.WriteLine($"Self-attention output: {selfAttOutput.RowCount} x {selfAttOutput.ColumnCount}");
+            Console.WriteLine(selfAttOutput.ToString());
+
+
+            // Create the dense layer to project from embeddingDim to vocabSize.
+            OutputProjectionLayer denseLayer = new OutputProjectionLayer(embeddingDim, vocabSize);
+            OutputProjectionLayer.Save(denseLayer, "./output-projection-layer.json");
+            OutputProjectionLayer denseLayer2 = OutputProjectionLayer.Load("./output-projection-layer.json");
+
+            // Compute logits: each row corresponds to a token, and has vocabSize columns.
+            MatrixF logits = denseLayer.Forward(selfAttOutput);
+
+            // Optionally, apply softmax to get probability distributions.
+            MatrixF probabilities = OutputProjectionLayer.Softmax(logits);
+
+            // Select the last token's probability distribution.
+            VectorF lastTokenProbabilities = probabilities.Row(probabilities.RowCount - 1);
+
+            // Compute the argmax of the last token's probabilities.
+            int predictedIndex = ArgMax(lastTokenProbabilities);
+
+            string predictedToken = tokenVocab.GetTokenString(predictedIndex);
+
+            Console.WriteLine($"Predicted next token (index {predictedIndex}): {predictedToken}");
         }
 
         // --------------------------------------------------------------------------------------------
@@ -488,8 +518,8 @@ namespace MathNetDemo
             //DemoSelfAttention();
             //DemoDenseOutput();
 
-            // DemoTokenVocab();
-            // DemoEmbeddings2();
+            //DemoTokenVocab();
+            //DemoEmbeddings2();
             DemoPositionalEncoding();
         }
     }

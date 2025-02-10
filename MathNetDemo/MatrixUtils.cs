@@ -39,4 +39,38 @@ public static class MatrixOperations
         }
         return result;
     }
+
+    /// <summary>
+    /// Applies a hyperbolic tangent (tanh) normalization to each element of the matrix.
+    /// This function is useful for softly constraining values so that they remain within (-1, 1)
+    /// while preserving the relative differences among small values.
+    /// </summary>
+    /// <param name="matrix">The input matrix.</param>
+    /// <param name="scale">
+    /// An optional scaling factor applied to each element before applying tanh.
+    /// For small scale values, the function remains nearly linear; for larger scale values,
+    /// the tanh saturates more aggressively. Default is 1.0f.
+    /// </param>
+    /// <returns>A new matrix with each element transformed by the tanh function.</returns>
+    // Usage: MatrixF tanhNormalizedMatrix = MatrixOperations.TanhNormalize(matrix);
+    //        MatrixF tanhNormalizedMatrixScaled = MatrixOperations.TanhNormalize(matrix, 0.5f);
+    public static MatrixF TanhNormalize(this MatrixF matrix, float scale = 1.0f)
+    {
+        // Option 1: Using MathNet's Map function for conciseness.
+        return matrix.Map(x => MathF.Tanh(scale * x));
+
+        // Option 2: Explicit iteration (uncomment if you prefer loops)
+        /*
+        MatrixF result = DenseMatrix.Build.Dense(matrix.RowCount, matrix.ColumnCount);
+        for (int i = 0; i < matrix.RowCount; i++)
+        {
+            for (int j = 0; j < matrix.ColumnCount; j++)
+            {
+                result[i, j] = MathF.Tanh(scale * matrix[i, j]);
+            }
+        }
+        return result;
+        */
+    }
+
 }

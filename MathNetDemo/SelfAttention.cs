@@ -23,9 +23,6 @@ public class SelfAttention
     // Output projection weight matrix. Shape: (ModelDim, ModelDim)
     public MatrixF W_o { get; private set; }
 
-    // A random number generator for weight initialization.
-    private static readonly Random random = new Random();
-
     // --------------------------------------------------------------------------------------------
 
     // Creates a new self-attention layer with the given model dimensionality.
@@ -35,13 +32,9 @@ public class SelfAttention
         ModelDim = modelDim;
 
         // Create a uniform distribution for small random initialization.
-        var uniform = new ContinuousUniform(-0.1f, 0.1f);
-
-        // Initialize weight matrices.
-        W_q = DenseMatrix.Build.Random(modelDim, modelDim, uniform);
-        W_k = DenseMatrix.Build.Random(modelDim, modelDim, uniform);
-        W_v = DenseMatrix.Build.Random(modelDim, modelDim, uniform);
-        W_o = DenseMatrix.Build.Random(modelDim, modelDim, uniform);
+        float rangeMin = -1f;
+        float rangeMax =  1f;
+        SetRandomWeights(rangeMin, rangeMax);
     }
 
     // --------------------------------------------------------------------------------------------
@@ -49,36 +42,44 @@ public class SelfAttention
     public void SetRandomWeights(float min, float max)
     {
         // Create a uniform distribution for small random initialization.
-        var uniform = new ContinuousUniform(min, max);
+        float rangeMin = min;
+        float rangeMax = max;
 
         // Initialize weight matrices.
-        W_q = DenseMatrix.Build.Random(ModelDim, ModelDim, uniform);
-        W_k = DenseMatrix.Build.Random(ModelDim, ModelDim, uniform);
-        W_v = DenseMatrix.Build.Random(ModelDim, ModelDim, uniform);
-        W_o = DenseMatrix.Build.Random(ModelDim, ModelDim, uniform);
+        W_q = DenseMatrix.Build.Random(ModelDim, ModelDim, new ContinuousUniform(rangeMin, rangeMax));
+        W_k = DenseMatrix.Build.Random(ModelDim, ModelDim, new ContinuousUniform(rangeMin, rangeMax));
+        W_v = DenseMatrix.Build.Random(ModelDim, ModelDim, new ContinuousUniform(rangeMin, rangeMax));
+        W_o = DenseMatrix.Build.Random(ModelDim, ModelDim, new ContinuousUniform(rangeMin, rangeMax));
     }
 
     public void ApplyRandomOffset(float absOffset)
     {
         // The offset for each value is plus/minus a random value in the range [-absOffset, absOffset].
         // A different offset is applied to each value in each matrix.
+        float rangeMin = -absOffset;
+        float rangeMax = absOffset;
+
+        // Initialize weight matrices.
+        MatrixF offsetq = DenseMatrix.Build.Random(ModelDim, ModelDim, new ContinuousUniform(rangeMin, rangeMax));
+        MatrixF offsetk = DenseMatrix.Build.Random(ModelDim, ModelDim, new ContinuousUniform(rangeMin, rangeMax));
+        MatrixF offsetv = DenseMatrix.Build.Random(ModelDim, ModelDim, new ContinuousUniform(rangeMin, rangeMax));
+        MatrixF offseto = DenseMatrix.Build.Random(ModelDim, ModelDim, new ContinuousUniform(rangeMin, rangeMax));
 
         // Apply the offset to each element in each matrix.
-        ApplyOffset(W_q, absOffset);
-        ApplyOffset(W_k, absOffset);
-        ApplyOffset(W_v, absOffset);
+        W_q += offsetq;
+        W_k += offsetk;
+        W_v += offsetv;
+        W_o += offseto;
+
+        NormalizeWeights();
     }
 
-    private void ApplyOffset(MatrixF w, float absOffset)
+    public void NormalizeWeights()
     {
-        // Create a continuous uniform distribution for the offset.
-        var uniformOffset = new ContinuousUniform(-absOffset, absOffset);
-
-        // Generate a matrix of the same dimensions filled with random offsets.
-        MatrixF offsetMatrix = DenseMatrix.Build.Random(w.RowCount, w.ColumnCount, uniformOffset);
-
-        // Add the offset matrix to the weight matrix.
-        w.Add(offsetMatrix, result: w); // The 'result: w' performs an in-place addition.
+        W_q.TanhNormalize();
+        W_k.TanhNormalize();
+        W_v.TanhNormalize();
+        W_o.TanhNormalize();
     }
 
     // --------------------------------------------------------------------------------------------
@@ -162,18 +163,18 @@ public class SelfAttention
     // --------------------------------------------------------------------------------------------
 
     // Save the self-attention layer to a file.
-    public static void Save(SelfAttention layer, string path)
+    public void SaveToFile(string path)
     {
         using (var writer = new StreamWriter(path))
         {
             // Write the model dimension.
-            writer.WriteLine(layer.ModelDim);
+            writer.WriteLine(ModelDim);
 
             // Save each weight matrix.
-            SaveMatrix(writer, layer.W_q);
-            SaveMatrix(writer, layer.W_k);
-            SaveMatrix(writer, layer.W_v);
-            SaveMatrix(writer, layer.W_o);
+            SaveMatrix(writer, W_q);
+            SaveMatrix(writer, W_k);
+            SaveMatrix(writer, W_v);
+            SaveMatrix(writer, W_o);
         }
     }
 
@@ -195,7 +196,7 @@ public class SelfAttention
     // --------------------------------------------------------------------------------------------
 
     // Load a self-attention layer from a file.
-    public static SelfAttention Load(string path)
+    public static SelfAttention LoadFromFile(string path)
     {
         using (var reader = new StreamReader(path))
         {
