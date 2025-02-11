@@ -484,6 +484,19 @@ namespace MathNetDemo
             Console.WriteLine(selfAttOutput.ToString());
 
 
+
+
+            //FeedForwardLayer
+            FeedForwardLayer feedForwardLayer = new FeedForwardLayer(embeddingDim, 4 * embeddingDim);
+            //feedForwardLayer.SaveToFile("./feed-forward-layer.json");
+            MatrixF ffoutput = feedForwardLayer.Forward(selfAttOutput);
+
+            Console.WriteLine("");
+            Console.WriteLine($"Feed Forward output: {ffoutput.RowCount} x {ffoutput.ColumnCount}");
+            Console.WriteLine(ffoutput.ToString());
+
+
+
             // Create the dense layer to project from embeddingDim to vocabSize.
             OutputProjectionLayer denseLayer = new OutputProjectionLayer(embeddingDim, vocabSize);
             OutputProjectionLayer.Save(denseLayer, "./output-projection-layer.json");
