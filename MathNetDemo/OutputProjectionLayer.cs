@@ -74,22 +74,26 @@ public class OutputProjectionLayer
         return result;
     }
 
+    // --------------------------------------------------------------------------------------------
+    // MARK: Serialization
+    // --------------------------------------------------------------------------------------------
+
     // Save the OutputProjectionLayer's parameters to a file.
-    public static void Save(OutputProjectionLayer layer, string filename)
+    public void SaveToFile(string filename)
     {
         // Create a serializable object.
         var parameters = new OutputProjectionLayerParameters
         {
-            InputDim = layer.InputDim,
-            OutputDim = layer.OutputDim,
-            Weights = new float[layer.Weights.RowCount][],
-            Biases = layer.Biases.ToArray()
+            InputDim  = InputDim,
+            OutputDim = OutputDim,
+            Weights   = new float[Weights.RowCount][],
+            Biases    = Biases.ToArray()
         };
 
         // Convert the Weights matrix to a jagged array.
-        for (int i = 0; i < layer.Weights.RowCount; i++)
+        for (int i = 0; i < Weights.RowCount; i++)
         {
-            parameters.Weights[i] = layer.Weights.Row(i).ToArray();
+            parameters.Weights[i] = Weights.Row(i).ToArray();
         }
 
         // Serialize with indentation for readability.
@@ -99,7 +103,7 @@ public class OutputProjectionLayer
     }
 
     // Load the OutputProjectionLayer's parameters from a file.
-    public static OutputProjectionLayer Load(string filename)
+    public static OutputProjectionLayer LoadFromFile(string filename)
     {
         string json = File.ReadAllText(filename);
         OutputProjectionLayerParameters parameters = JsonSerializer.Deserialize<OutputProjectionLayerParameters>(json);

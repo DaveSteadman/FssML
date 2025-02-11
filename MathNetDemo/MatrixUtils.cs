@@ -76,7 +76,7 @@ public static class MatrixOperations
     // --------------------------------------------------------------------------------------------
 
     // Helper method to load a matrix.
-    private static MatrixF LoadMatrix(StreamReader reader)
+    public static MatrixF LoadMatrix(StreamReader reader)
     {
         // Read the header line that contains the dimensions.
         string[] dims = reader.ReadLine().Split(' ');

@@ -444,7 +444,9 @@ namespace MathNetDemo
             Console.WriteLine(embeddingMatrix.Row(0).ToString());
 
             // Create a positional encoding layer
-            MatrixF posEncoding = PositionalEncoder.GetPositionalEncoding(inputSize, embeddingDim);
+
+            PositionalEncoder posEnc = new PositionalEncoder(inputSize, embeddingDim);
+            MatrixF posEncoding = posEnc.EncodingMatrix;
 
             // Debug print the positional encoding matrix
             Console.WriteLine("");
@@ -499,8 +501,8 @@ namespace MathNetDemo
 
             // Create the dense layer to project from embeddingDim to vocabSize.
             OutputProjectionLayer denseLayer = new OutputProjectionLayer(embeddingDim, vocabSize);
-            OutputProjectionLayer.Save(denseLayer, "./output-projection-layer.json");
-            OutputProjectionLayer denseLayer2 = OutputProjectionLayer.Load("./output-projection-layer.json");
+            denseLayer.SaveToFile("./output-projection-layer.json");
+            OutputProjectionLayer denseLayer2 = OutputProjectionLayer.LoadFromFile("./output-projection-layer.json");
 
             // Compute logits: each row corresponds to a token, and has vocabSize columns.
             MatrixF logits = denseLayer.Forward(selfAttOutput);
@@ -520,6 +522,25 @@ namespace MathNetDemo
         }
 
         // --------------------------------------------------------------------------------------------
+        // MARK: v0.3
+        // --------------------------------------------------------------------------------------------
+
+        public static void DemoMakeModel()
+        {
+            var model = new TransformerModel("./Model_001");
+
+            model.Create01_CreateVocab("./SampleStr.txt", 1000);
+            model.Create02_CreateEmbedding(16);
+            model.Create03_CreatePositionalEncoding();
+            model.Create04_CreateSelfAttention();
+            model.Create05_CreateFeedForward();
+            model.Create06_CreateOutputProjection();
+            model.SaveModel();
+
+            TransformerModel model2  = TransformerModel.LoadModel("./Model_001");
+        }
+
+        // --------------------------------------------------------------------------------------------
         // MARK: Main
         // --------------------------------------------------------------------------------------------
 
@@ -533,7 +554,9 @@ namespace MathNetDemo
 
             //DemoTokenVocab();
             //DemoEmbeddings2();
-            DemoPositionalEncoding();
+            //DemoPositionalEncoding();
+
+            DemoMakeModel();
         }
     }
 }

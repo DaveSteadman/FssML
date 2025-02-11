@@ -4,9 +4,9 @@ using System.IO;
 using System.Linq;
 using System.Text.Json;
 using MathNet.Numerics.LinearAlgebra;
+
 using MatrixF = MathNet.Numerics.LinearAlgebra.Matrix<float>;
 using VectorF = MathNet.Numerics.LinearAlgebra.Vector<float>;
-
 
 public class FeedForwardLayer
 {
@@ -98,13 +98,15 @@ public class FeedForwardLayer
         }
     }
 
+    // --------------------------------------------------------------------------------------------
+
     public static FeedForwardLayer LoadFromFile(string path)
     {
         using (var reader = File.OpenText(path))
         {
             // Read the model dimension.
             int d_model = int.Parse(reader.ReadLine());
-            int d_ff = int.Parse(reader.ReadLine());
+            int d_ff    = int.Parse(reader.ReadLine());
 
             // Create a new FeedForwardLayer instance.
             FeedForwardLayer layer = new FeedForwardLayer(d_model, d_ff);

@@ -208,37 +208,12 @@ public class SelfAttention
             SelfAttention layer = new SelfAttention(modelDim);
 
             // Load each weight matrix and assign to the corresponding property.
-            layer.W_q = LoadMatrix(reader);
-            layer.W_k = LoadMatrix(reader);
-            layer.W_v = LoadMatrix(reader);
-            layer.W_o = LoadMatrix(reader);
+            layer.W_q = MatrixOperations.LoadMatrix(reader);
+            layer.W_k = MatrixOperations.LoadMatrix(reader);
+            layer.W_v = MatrixOperations.LoadMatrix(reader);
+            layer.W_o = MatrixOperations.LoadMatrix(reader);
 
             return layer;
         }
-    }
-
-    // --------------------------------------------------------------------------------------------
-
-    // Helper method to load a matrix.
-    private static MatrixF LoadMatrix(StreamReader reader)
-    {
-        // Read the header line that contains the dimensions.
-        string[] dims = reader.ReadLine().Split(' ');
-        int rows = int.Parse(dims[0]);
-        int cols = int.Parse(dims[1]);
-
-        // Create a new dense matrix.
-        MatrixF matrix = DenseMatrix.Build.Dense(rows, cols);
-
-        // Read each row.
-        for (int i = 0; i < rows; i++)
-        {
-            string[] tokens = reader.ReadLine().Split(' ');
-            for (int j = 0; j < cols; j++)
-            {
-                matrix[i, j] = float.Parse(tokens[j]);
-            }
-        }
-        return matrix;
     }
 }

@@ -3,21 +3,40 @@
 
 
 using System;
-using MathNet.Numerics.LinearAlgebra.Single;
-using MathNet.Numerics.Distributions;
-
-// Alias for brevity.
-using MatrixF = MathNet.Numerics.LinearAlgebra.Matrix<float>;
-using VectorF = MathNet.Numerics.LinearAlgebra.Vector<float>;
 
 
+public struct TransformerModelFilenames
+{
+    public string VocabPath            { get; set; }
+    public string EmbeddingPath        { get; set; }
+    public string SelfAttPath          { get; set; }
+    public string FeedForwardPath      { get; set; }
+    public string OutputProjectionPath { get; set; }
+
+    public TransformerModelFilenames(string dirPath)
+    {
+        VocabPath            = System.IO.Path.Combine(dirPath, "vocab.json");
+        EmbeddingPath        = System.IO.Path.Combine(dirPath, "embedding.json");
+        SelfAttPath          = System.IO.Path.Combine(dirPath, "selfatt.json");
+        FeedForwardPath      = System.IO.Path.Combine(dirPath, "feedforward.json");
+        OutputProjectionPath = System.IO.Path.Combine(dirPath, "outputprojection.json");
+    }
+}
 
 public class TransformerModel
 {
-    public string          DirPath   { get; set; } = "";
-    public TokenVocab?     Vocab     { get; set; }
-    public EmbeddingLayer? Embedding { get; set; }
-    public SelfAttention?  SelfAtt   { get; set; }
+    public string            DirPath     { get; set; } = "";
+    public TransformerModelFilenames Filenames;
+
+    public TokenVocab?            Vocab            { get; set; } = null;
+    public EmbeddingLayer?        Embedding        { get; set; } = null;
+    public PositionalEncoder?     PositionalEnc    { get; set; } = null;
+    public SelfAttention?         SelfAtt          { get; set; } = null;
+    public FeedForwardLayer?      FeedForward      { get; set; } = null;
+    public OutputProjectionLayer? OutputProjection { get; set; } = null;
+
+    public int EmbeddingDim = 0;
+    public int FFHiddenDim  = 0;
 
     // --------------------------------------------------------------------------------------------
     // MARK: Constructor
@@ -25,20 +44,141 @@ public class TransformerModel
 
     public TransformerModel(string dirPath)
     {
-        DirPath = dirPath;
+        DirPath   = dirPath;
+        EnsurePathExists(DirPath);
+
+        Filenames = new(DirPath);
+    }
+
+    // --------------------------------------------------------------------------------------------
+    // MARK: Create Model
+    // --------------------------------------------------------------------------------------------
+
+    public void Create01_CreateVocab(string vocabFilepath, int targetTokenCount)
+    {
+        Vocab = new TokenVocab();
+
+        Console.WriteLine("- - - DemoTokenVocab - - - - - -");
+
+        Vocab.SaveToFile(Filenames.VocabPath);
+
+        // Load the input string from file
+        string input = File.ReadAllText(vocabFilepath);
+
+        int newTokenPerIteration = 25;
+        int currIterationcount = 0;
+        int prevCount = 0;
+        int targetCount = (int)(targetTokenCount * 1.1); // Overshoot, so we can limit the size later when culling control chars etc
+        int maxIterations = (int)((targetCount / newTokenPerIteration) * 1.5);
+        while (Vocab.Count < targetCount)
+        {
+            Vocab.ApplyBPEIteration(input, newTokenPerIteration); // Add 25 tokens at a time
+            Console.Write($"{Vocab.Count} ");
+
+            // Break out of the loop in case we aren't making progress, either but loops or by count
+            if (currIterationcount > maxIterations) break;
+            if (Vocab.Count == prevCount) break;
+            currIterationcount++;
+            prevCount = Vocab.Count;
+        }
+        Console.Write($"Done\n");
+        Vocab.SaveToFile(Filenames.VocabPath);
+        TokenVocab.PerformLimitSizePass(Filenames.VocabPath, targetTokenCount);
+        Vocab = TokenVocab.LoadFromFile(Filenames.VocabPath);
+    }
+
+    public void Create02_CreateEmbedding(int embeddingDim)
+    {
+        EmbeddingDim = embeddingDim;
+
+        if (Vocab == null)
+            throw new Exception("Vocab must be created before creating the embedding layer.");
+
+        Embedding = new EmbeddingLayer(Vocab!.Count, EmbeddingDim);
+
+        Embedding.SaveToFile(Filenames.EmbeddingPath);
+    }
+
+    public void Create03_CreatePositionalEncoding()
+    {
+        if (Embedding == null)
+            throw new Exception("Embedding must be created before creating the positional encoding.");
+
+        // Create the positional encoding matrix.
+        // PositionalEncoding = new PositionalEncoding(EmbeddingDim, MaxLength);
+
+        PositionalEnc = new PositionalEncoder(EmbeddingDim, EmbeddingDim);
+    }
+
+    public void Create04_CreateSelfAttention()
+    {
+        if (Embedding == null)
+            throw new Exception("Embedding must be created before creating the self-attention layer.");
+
+        SelfAtt = new SelfAttention(EmbeddingDim);
+    }
+
+    public void Create05_CreateFeedForward()
+    {
+        if (SelfAtt == null)
+            throw new Exception("Self-attention must be created before creating the feed-forward layer.");
+
+        FFHiddenDim = EmbeddingDim * 4;
+        FeedForward = new FeedForwardLayer(EmbeddingDim, FFHiddenDim);
+    }
+
+    public void Create06_CreateOutputProjection()
+    {
+        if (FeedForward == null)
+            throw new Exception("Feed-forward must be created before creating the output projection.");
+
+        OutputProjection = new OutputProjectionLayer(EmbeddingDim, Vocab!.Count);
+    }
+
+    // --------------------------------------------------------------------------------------------
+    // MARK: Prediction
+    // --------------------------------------------------------------------------------------------
+
+    public string PredictNextToken(string inputText)
+    {
+        // Tokenize the input text.
+        //var tokenIds = Vocab!.Tokenize(inputText);
+
+        // Get the embeddings for the input tokens.
+        //var embeddings = Embedding!.LookupList(tokenIds);
+
+        // Apply the positional encoding to the embeddings.
+        // var encodedEmbeddings = PositionalEncoding.Apply(embeddings);
+
+        // Apply the self-attention mechanism.
+        // var selfAttOutput = SelfAtt.Apply(encodedEmbeddings);
+
+        // Apply the feed-forward layer.
+        // var feedForwardOutput = FeedForward.Apply(selfAttOutput);
+
+        // Apply the output projection layer.
+        // var outputProjections = OutputProjection.Apply(feedForwardOutput);
+
+        // Get the token ID of the most likely next token.
+        // var nextTokenId = Vocab.GetMostLikelyToken(outputProjections);
+
+        // Return the next token as a string.
+        // return Vocab.GetToken(nextTokenId);
+        return "";
     }
 
     // --------------------------------------------------------------------------------------------
     // MARK: Serialization
     // --------------------------------------------------------------------------------------------
 
+    public void EnsurePathExists(string path)
+    {
+        if (!Directory.Exists(path))
+            Directory.CreateDirectory(path);
+    }
+
     public void SaveModel()
     {
-        // Determine all the filenames
-        string vocabPath     = Path.Combine(DirPath, "vocab.json");
-        string embeddingPath = Path.Combine(DirPath, "embedding.json");
-        string selfAttPath   = Path.Combine(DirPath, "selfatt.json");
-
         // check the directory exists
         if (!Directory.Exists(DirPath))
             Directory.CreateDirectory(DirPath);
@@ -48,26 +188,28 @@ public class TransformerModel
         // string modelJson = JsonSerializer.Serialize(this);
         // File.WriteAllText(modelPath, modelJson);
 
-        Vocab.SaveToFile(vocabPath);
-        Embedding.SaveToFile(embeddingPath);
-        SelfAtt.SaveToFile(selfAttPath);
+        Vocab?.SaveToFile(Filenames.VocabPath);
+        Embedding?.SaveToFile(Filenames.EmbeddingPath);
+        SelfAtt?.SaveToFile(Filenames.SelfAttPath);
+        FeedForward?.SaveToFile(Filenames.FeedForwardPath);
+        OutputProjection?.SaveToFile(Filenames.OutputProjectionPath);
     }
 
     // --------------------------------------------------------------------------------------------
 
-    public static TransformerModel LoadModel(string modelPath)
+    public static TransformerModel LoadModel(string dirPath)
     {
-        TransformerModel model = new TransformerModel(modelPath);
-
-        // Determine all the filenames
-        string vocabPath     = Path.Combine(modelPath, "vocab.json");
-        string embeddingPath = Path.Combine(modelPath, "embedding.json");
-        string selfAttPath   = Path.Combine(modelPath, "selfatt.json");
+        TransformerModel model = new TransformerModel(dirPath);
 
         // Load the model parameters from a JSON file.
-        model.Vocab     = TokenVocab.LoadFromFile(vocabPath);
-        model.Embedding = EmbeddingLayer.LoadFromFile(embeddingPath);
-        model.SelfAtt   = SelfAttention.LoadFromFile(selfAttPath);
+        model.Vocab            = TokenVocab.LoadFromFile(model.Filenames.VocabPath);
+        model.Embedding        = EmbeddingLayer.LoadFromFile(model.Filenames.EmbeddingPath);
+
+        model.Create03_CreatePositionalEncoding();
+
+        model.SelfAtt          = SelfAttention.LoadFromFile(model.Filenames.SelfAttPath);
+        model.FeedForward      = FeedForwardLayer.LoadFromFile(model.Filenames.FeedForwardPath);
+        model.OutputProjection = OutputProjectionLayer.LoadFromFile(model.Filenames.OutputProjectionPath);
 
         return model;
     }
