@@ -8,7 +8,9 @@ public class PositionalEncoder
 {
     private int sequenceLength;
     private int embeddingDim;
+
     private MatrixF positionalEncoding;
+    public MatrixF EncodingMatrix => positionalEncoding;
 
     /// <summary>
     /// Initializes a new instance of the PositionalEncoder class
@@ -75,9 +77,4 @@ public class PositionalEncoder
         this.embeddingDim = newEmbeddingDim;
         this.positionalEncoding = CreatePositionalEncoding();
     }
-
-    /// <summary>
-    /// Gets the current positional encoding matrix.
-    /// </summary>
-    public MatrixF EncodingMatrix => positionalEncoding;
 }

@@ -14,11 +14,12 @@
 
 // Codespace Commands
 // ==================
-// git commit -am "consistency"
+// git commit -am "model progress"
 // git add <filename>
 // git push
 
 using System;
+using System.Text;
 using System.Collections.Generic;
 
 using MathNet.Numerics.Distributions;
@@ -538,6 +539,38 @@ namespace MathNetDemo
             model.SaveModel();
 
             TransformerModel model2  = TransformerModel.LoadModel("./Model_001");
+
+            //model2.
+        }
+
+        // --------------------------------------------------------------------------------------------
+        // MARK: Demo
+        // --------------------------------------------------------------------------------------------
+
+        public static void DemoTinyML()
+        {
+            // Load the input string from file
+            string input = File.ReadAllText("SampleStr.txt");
+
+            TokenVocab vocab = new ();
+
+            // Add the vocab
+            int currIterationcount = 0;
+            int prevCount = 0;
+            while (vocab.Count < 500)
+            {
+                vocab.ApplyBPEIteration(input, 30);
+                Console.Write($"{vocab.Count} ");
+
+                // Break out of the loop in case we aren't making progress, either but loops or by count
+                if (currIterationcount > 500) break;
+                if (vocab.Count == prevCount) break;
+                currIterationcount++;
+                prevCount = vocab.Count;
+            }
+            vocab.SaveToFile("./vocab2.txt");
+            TokenVocab.PerformLimitSizePass("./vocab2.txt", 500);
+
         }
 
         // --------------------------------------------------------------------------------------------
@@ -557,6 +590,8 @@ namespace MathNetDemo
             //DemoPositionalEncoding();
 
             DemoMakeModel();
+
+            //DemoTinyML();
         }
     }
 }

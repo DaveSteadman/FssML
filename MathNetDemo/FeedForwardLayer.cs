@@ -84,17 +84,20 @@ public class FeedForwardLayer
 
     public void SaveToFile(string path)
     {
-        using (var writer = File.CreateText(path))
+        using (var writer = new StreamWriter(path))
         {
-            // Write the model dimension.
-            writer.WriteLine(d_model);
-            writer.WriteLine(d_ff);
+            string header = $"{d_model} {d_ff}";
+            writer.WriteLine(header);
 
-            // Write the weights and biases.
-            writer.WriteLine(JsonSerializer.Serialize(W1));
-            writer.WriteLine(JsonSerializer.Serialize(b1));
-            writer.WriteLine(JsonSerializer.Serialize(W2));
-            writer.WriteLine(JsonSerializer.Serialize(b2));
+            string w1_string = MatrixOperations.MatrixToString(W1);
+            string b1_string = MatrixOperations.VectorToString(b1);
+            string w2_string = MatrixOperations.MatrixToString(W2);
+            string b2_string = MatrixOperations.VectorToString(b2);
+
+            writer.WriteLine(w1_string);
+            writer.WriteLine(b1_string);
+            writer.WriteLine(w2_string);
+            writer.WriteLine(b2_string);
         }
     }
 
@@ -105,17 +108,40 @@ public class FeedForwardLayer
         using (var reader = File.OpenText(path))
         {
             // Read the model dimension.
-            int d_model = int.Parse(reader.ReadLine());
-            int d_ff    = int.Parse(reader.ReadLine());
+            string[] header       = reader.ReadLine().Split(' ');
+            int      new_d_model  = int.Parse(header[0]);
+            int      new_d_ff     = int.Parse(header[1]);
+
+            string? w1_string = reader.ReadLine();
+            string? b1_string = reader.ReadLine();
+            string? w2_string = reader.ReadLine();
+            string? b2_string = reader.ReadLine();
+
+            // check the strings are valid
+            if (w1_string == null || b1_string == null || w2_string == null || b2_string == null)
+                throw new ArgumentException("Input processing error");
+
+            MatrixF newW1;
+            VectorF newB1;
+            MatrixF newW2;
+            VectorF newB2;
+
+            // Load each weight matrix and assign to the corresponding property.
+            bool w1_read_ok = (MatrixOperations.TryStringToMatrix(w1_string, out newW1!));
+            bool b1_read_ok = (MatrixOperations.TryStringToVector(b1_string, out newB1!));
+            bool w2_read_ok = (MatrixOperations.TryStringToMatrix(w2_string, out newW2!));
+            bool b2_read_ok = (MatrixOperations.TryStringToVector(b2_string, out newB2!));
+
+            if (!w1_read_ok || !b1_read_ok || !w2_read_ok || !b2_read_ok)
+                 throw new ArgumentException("Matrix parsing error");
 
             // Create a new FeedForwardLayer instance.
-            FeedForwardLayer layer = new FeedForwardLayer(d_model, d_ff);
+            FeedForwardLayer layer = new FeedForwardLayer(new_d_model, new_d_ff);
 
-            // Read the weights and biases.
-            layer.W1 = JsonSerializer.Deserialize<MatrixF>(reader.ReadLine());
-            layer.b1 = JsonSerializer.Deserialize<VectorF>(reader.ReadLine());
-            layer.W2 = JsonSerializer.Deserialize<MatrixF>(reader.ReadLine());
-            layer.b2 = JsonSerializer.Deserialize<VectorF>(reader.ReadLine());
+            if (w1_read_ok) layer.W1 = newW1!;
+            if (b1_read_ok) layer.b1 = newB1!;
+            if (w2_read_ok) layer.W2 = newW2!;
+            if (b2_read_ok) layer.b2 = newB2!;
 
             return layer;
         }

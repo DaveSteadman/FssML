@@ -2,9 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Text.Json;
-
-#nullable enable
+using System.Text.RegularExpressions;
 
 public class TokenVocab
 {
@@ -199,29 +199,46 @@ public class TokenVocab
     // MARK: Serialization
     // --------------------------------------------------------------------------------------------
 
-    // Returns a JSON string representing the vocabulary.
-    public string ToJson()
+    public void SaveToFile(string filepath)
     {
-        // Use indented formatting for readability.
-        var options = new JsonSerializerOptions { WriteIndented = true };
-        return JsonSerializer.Serialize(VocabDictionary, options);
+        using (var writer = new StreamWriter(filepath, false, Encoding.UTF8))
+        {
+            // loop through each value in the dictionary, writing it out.
+            foreach (var pair in VocabDictionary)
+            {
+                // Note that the value may contain whitespace and special characters
+                // so we need to escape it.
+                writer.WriteLine($"\"{pair.Value}\" \"{pair.Key}\"");
+            }
+        }
     }
 
-    // Saves the vocabulary to a file at the specified path.
-    public void SaveToFile(string filePath)
-    {
-        File.WriteAllText(filePath, ToJson());
-    }
-
-    // Static method to load a Vocabulary from a JSON file.
     public static TokenVocab LoadFromFile(string filePath)
     {
-        string json = File.ReadAllText(filePath);
-        var dict = JsonSerializer.Deserialize<Dictionary<string, int>>(json);
-        if (dict == null)
-            throw new Exception("Failed to deserialize vocabulary.");
-        return new TokenVocab(dict);
+        var vocab = new TokenVocab();
+        using (var reader = new StreamReader(filePath, Encoding.UTF8))
+        {
+            while (!reader.EndOfStream)
+            {
+                string line = reader.ReadLine();
+
+                var matches = Regex.Matches(line, "\"([^\"]*)\"");
+                if (matches.Count != 2)
+                throw new Exception("Invalid line in vocabulary file.");
+
+                string valueStr = matches[0].Groups[1].Value;
+                string key      = matches[1].Groups[1].Value;
+
+                if (!String.IsNullOrEmpty(key) && !String.IsNullOrEmpty(valueStr))
+                {
+                    int tokenId = int.Parse(valueStr);
+                    vocab.VocabDictionary[key] = tokenId;
+                }
+            }
+        }
+        return vocab;
     }
+
 
     // --------------------------------------------------------------------------------------------
     // MARK: Management

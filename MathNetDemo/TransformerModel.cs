@@ -15,11 +15,11 @@ public struct TransformerModelFilenames
 
     public TransformerModelFilenames(string dirPath)
     {
-        VocabPath            = System.IO.Path.Combine(dirPath, "vocab.json");
-        EmbeddingPath        = System.IO.Path.Combine(dirPath, "embedding.json");
-        SelfAttPath          = System.IO.Path.Combine(dirPath, "selfatt.json");
-        FeedForwardPath      = System.IO.Path.Combine(dirPath, "feedforward.json");
-        OutputProjectionPath = System.IO.Path.Combine(dirPath, "outputprojection.json");
+        VocabPath            = System.IO.Path.Combine(dirPath, "vocab.txt");
+        EmbeddingPath        = System.IO.Path.Combine(dirPath, "embedding.txt");
+        SelfAttPath          = System.IO.Path.Combine(dirPath, "selfatt.txt");
+        FeedForwardPath      = System.IO.Path.Combine(dirPath, "feedforward.txt");
+        OutputProjectionPath = System.IO.Path.Combine(dirPath, "outputprojection.txt");
     }
 }
 
@@ -142,22 +142,23 @@ public class TransformerModel
     public string PredictNextToken(string inputText)
     {
         // Tokenize the input text.
-        //var tokenIds = Vocab!.Tokenize(inputText);
+        List<string> TokenStrList = Vocab!.TokenizeToStrings(inputText);
+        List<int>    tokenIdList  = Vocab!.TokenizeToIds(inputText);
 
         // Get the embeddings for the input tokens.
-        //var embeddings = Embedding!.LookupList(tokenIds);
+        var embeddings = Embedding!.LookupListToMatrix(tokenIdList);
 
         // Apply the positional encoding to the embeddings.
-        // var encodedEmbeddings = PositionalEncoding.Apply(embeddings);
+        var encodedEmbeddings = PositionalEnc!.ApplyPositionalEncoding(embeddings);
 
         // Apply the self-attention mechanism.
-        // var selfAttOutput = SelfAtt.Apply(encodedEmbeddings);
+        var selfAttOutput = SelfAtt!.Forward(encodedEmbeddings);
 
         // Apply the feed-forward layer.
-        // var feedForwardOutput = FeedForward.Apply(selfAttOutput);
+        //var feedForwardOutput = FeedForward.Apply(selfAttOutput);
 
         // Apply the output projection layer.
-        // var outputProjections = OutputProjection.Apply(feedForwardOutput);
+        var outputProjections = OutputProjection!.Forward(selfAttOutput);
 
         // Get the token ID of the most likely next token.
         // var nextTokenId = Vocab.GetMostLikelyToken(outputProjections);

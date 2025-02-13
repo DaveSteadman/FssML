@@ -34,7 +34,12 @@ public class SelfAttention
         // Create a uniform distribution for small random initialization.
         float rangeMin = -1f;
         float rangeMax =  1f;
-        SetRandomWeights(rangeMin, rangeMax);
+
+        // Initialize weight matrices.
+        W_q = DenseMatrix.Build.Random(ModelDim, ModelDim, new ContinuousUniform(rangeMin, rangeMax));
+        W_k = DenseMatrix.Build.Random(ModelDim, ModelDim, new ContinuousUniform(rangeMin, rangeMax));
+        W_v = DenseMatrix.Build.Random(ModelDim, ModelDim, new ContinuousUniform(rangeMin, rangeMax));
+        W_o = DenseMatrix.Build.Random(ModelDim, ModelDim, new ContinuousUniform(rangeMin, rangeMax));
     }
 
     // --------------------------------------------------------------------------------------------
@@ -170,26 +175,15 @@ public class SelfAttention
             // Write the model dimension.
             writer.WriteLine(ModelDim);
 
-            // Save each weight matrix.
-            SaveMatrix(writer, W_q);
-            SaveMatrix(writer, W_k);
-            SaveMatrix(writer, W_v);
-            SaveMatrix(writer, W_o);
-        }
-    }
+            string q_string = MatrixOperations.MatrixToString(W_q);
+            string k_string = MatrixOperations.MatrixToString(W_k);
+            string v_string = MatrixOperations.MatrixToString(W_v);
+            string o_string = MatrixOperations.MatrixToString(W_o);
 
-    // --------------------------------------------------------------------------------------------
-
-    // Helper method to save a matrix.
-    private static void SaveMatrix(StreamWriter writer, MatrixF matrix)
-    {
-        // Write matrix dimensions (rows and columns).
-        writer.WriteLine($"{matrix.RowCount} {matrix.ColumnCount}");
-
-        // Write each row as a space-separated list of floats.
-        for (int i = 0; i < matrix.RowCount; i++)
-        {
-            writer.WriteLine(string.Join(" ", matrix.Row(i).ToArray()));
+            writer.WriteLine(q_string);
+            writer.WriteLine(k_string);
+            writer.WriteLine(v_string);
+            writer.WriteLine(o_string);
         }
     }
 
@@ -203,15 +197,37 @@ public class SelfAttention
             // Read the model dimension.
             int modelDim = int.Parse(reader.ReadLine());
 
+            string? q_string = reader.ReadLine();
+            string? k_string = reader.ReadLine();
+            string? v_string = reader.ReadLine();
+            string? o_string = reader.ReadLine();
+
+            // check the strings are valid
+            if (q_string == null || k_string == null || v_string == null || o_string == null)
+                throw new ArgumentException("Input processing error");
+
+            MatrixF newQ;
+            MatrixF newK;
+            MatrixF newV;
+            MatrixF newO;
+
+            // Load each weight matrix and assign to the corresponding property.
+            bool q_read_ok = (MatrixOperations.TryStringToMatrix(q_string, out newQ!));
+            bool k_read_ok = (MatrixOperations.TryStringToMatrix(k_string, out newK!));
+            bool v_read_ok = (MatrixOperations.TryStringToMatrix(v_string, out newV!));
+            bool o_read_ok = (MatrixOperations.TryStringToMatrix(o_string, out newO!));
+
+            if (!q_read_ok || !k_read_ok || !v_read_ok || !o_read_ok)
+                 throw new ArgumentException("Matrix parsing error");
+
             // Create a new SelfAttention instance.
             // (The constructor will initialize random weights, but we overwrite them below.)
             SelfAttention layer = new SelfAttention(modelDim);
 
-            // Load each weight matrix and assign to the corresponding property.
-            layer.W_q = MatrixOperations.LoadMatrix(reader);
-            layer.W_k = MatrixOperations.LoadMatrix(reader);
-            layer.W_v = MatrixOperations.LoadMatrix(reader);
-            layer.W_o = MatrixOperations.LoadMatrix(reader);
+            if (q_read_ok) layer.W_q = newQ!;
+            if (k_read_ok) layer.W_k = newK!;
+            if (v_read_ok) layer.W_v = newV!;
+            if (o_read_ok) layer.W_o = newO!;
 
             return layer;
         }

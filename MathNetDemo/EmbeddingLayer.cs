@@ -151,11 +151,11 @@ public class EmbeddingLayer
     {
         using (var reader = new StreamReader(path))
         {
-            string[] header = reader.ReadLine().Split(' ');
-            int vocabSize    = int.Parse(header[0]);
-            int embeddingDim = int.Parse(header[1]);
+            string[] header       = reader.ReadLine().Split(' ');
+            int      vocabSize    = int.Parse(header[0]);
+            int      embeddingDim = int.Parse(header[1]);
 
-            if (vocabSize == 0) vocabSize = 1;
+            if (vocabSize    == 0) vocabSize    = 1;
             if (embeddingDim == 0) embeddingDim = 1;
 
             EmbeddingLayer embeddingLayer = new EmbeddingLayer(vocabSize, embeddingDim);
