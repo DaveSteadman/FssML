@@ -20,8 +20,8 @@ public class PositionalEncoder
     /// <param name="embeddingDim">The embedding dimension (d_model).</param>
     public PositionalEncoder(int sequenceLength, int embeddingDim)
     {
-        this.sequenceLength = sequenceLength;
-        this.embeddingDim = embeddingDim;
+        this.sequenceLength     = sequenceLength;
+        this.embeddingDim       = embeddingDim;
         this.positionalEncoding = CreatePositionalEncoding();
     }
 
@@ -60,9 +60,15 @@ public class PositionalEncoder
         if (embeddings == null)
             throw new ArgumentNullException(nameof(embeddings));
 
-        if (embeddings.RowCount != sequenceLength || embeddings.ColumnCount != embeddingDim)
-            throw new ArgumentException("The dimensions of the embeddings must match the stored positional encoding matrix.");
+        bool rowMatch = (embeddings.RowCount    == positionalEncoding.RowCount);
+        bool colMatch = (embeddings.ColumnCount == positionalEncoding.ColumnCount);
 
+        if (!rowMatch || !colMatch)
+        {
+            string inputDimensionStr    = $"[{embeddings.RowCount} x {embeddings.ColumnCount}]";
+            string encodingDimensionStr = $"[{positionalEncoding.RowCount} x {positionalEncoding.ColumnCount}]";
+            throw new ArgumentException($"The dimensions of the embeddings must match the stored positional encoding matrix // input {inputDimensionStr} // encoding {encodingDimensionStr}");
+        }
         return embeddings + positionalEncoding;
     }
 

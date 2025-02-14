@@ -509,17 +509,17 @@ namespace MathNetDemo
             MatrixF logits = denseLayer.Forward(selfAttOutput);
 
             // Optionally, apply softmax to get probability distributions.
-            MatrixF probabilities = OutputProjectionLayer.Softmax(logits);
+            // MatrixF probabilities = OutputProjectionLayer.Softmax(logits);
 
-            // Select the last token's probability distribution.
-            VectorF lastTokenProbabilities = probabilities.Row(probabilities.RowCount - 1);
+            // // Select the last token's probability distribution.
+            // VectorF lastTokenProbabilities = probabilities.Row(probabilities.RowCount - 1);
 
-            // Compute the argmax of the last token's probabilities.
-            int predictedIndex = ArgMax(lastTokenProbabilities);
+            // // Compute the argmax of the last token's probabilities.
+            // int predictedIndex = ArgMax(lastTokenProbabilities);
 
-            string predictedToken = tokenVocab.GetTokenString(predictedIndex);
+            // string predictedToken = tokenVocab.GetTokenString(predictedIndex);
 
-            Console.WriteLine($"Predicted next token (index {predictedIndex}): {predictedToken}");
+            // Console.WriteLine($"Predicted next token (index {predictedIndex}): {predictedToken}");
         }
 
         // --------------------------------------------------------------------------------------------
@@ -532,11 +532,13 @@ namespace MathNetDemo
 
             model.Create01_CreateVocab("./SampleStr.txt", 1000);
             model.Create02_CreateEmbedding(16);
-            model.Create03_CreatePositionalEncoding();
+            model.Create03_CreatePositionalEncoding(10);
             model.Create04_CreateSelfAttention();
             model.Create05_CreateFeedForward();
             model.Create06_CreateOutputProjection();
             model.SaveModel();
+
+            model.PredictNextToken("The rain in spain");
 
             TransformerModel model2  = TransformerModel.LoadModel("./Model_001");
 

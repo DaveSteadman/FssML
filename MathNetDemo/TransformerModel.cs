@@ -2,7 +2,18 @@
 
 
 
+
 using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Text.Json;
+
+using MathNet.Numerics.Distributions;
+using MathNet.Numerics.LinearAlgebra;
+using MathNet.Numerics.LinearAlgebra.Single;
+
+using MatrixF = MathNet.Numerics.LinearAlgebra.Matrix<float>;  // Alias for Matrix<float>
+using VectorF = MathNet.Numerics.LinearAlgebra.Vector<float>;  // Alias for Vector<float>
 
 
 public struct TransformerModelFilenames
@@ -37,6 +48,7 @@ public class TransformerModel
 
     public int EmbeddingDim = 0;
     public int FFHiddenDim  = 0;
+    public int InputLen     = 10;
 
     // --------------------------------------------------------------------------------------------
     // MARK: Constructor
@@ -99,15 +111,17 @@ public class TransformerModel
         Embedding.SaveToFile(Filenames.EmbeddingPath);
     }
 
-    public void Create03_CreatePositionalEncoding()
+    public void Create03_CreatePositionalEncoding(int inputLen)
     {
+        InputLen = 10;
+
         if (Embedding == null)
             throw new Exception("Embedding must be created before creating the positional encoding.");
 
         // Create the positional encoding matrix.
         // PositionalEncoding = new PositionalEncoding(EmbeddingDim, MaxLength);
 
-        PositionalEnc = new PositionalEncoder(EmbeddingDim, EmbeddingDim);
+        PositionalEnc = new PositionalEncoder(InputLen, EmbeddingDim);
     }
 
     public void Create04_CreateSelfAttention()
@@ -142,30 +156,67 @@ public class TransformerModel
     public string PredictNextToken(string inputText)
     {
         // Tokenize the input text.
-        List<string> TokenStrList = Vocab!.TokenizeToStrings(inputText);
+        List<string> tokenStrList = Vocab!.TokenizeToStrings(inputText);
         List<int>    tokenIdList  = Vocab!.TokenizeToIds(inputText);
+
+        // trim to the right length, either the last n tokens or the whole list with padding if needed
+        if (tokenIdList.Count > InputLen)
+            tokenIdList = tokenIdList.GetRange(tokenIdList.Count - InputLen, InputLen);
+        while (tokenIdList.Count < InputLen)
+        {
+            tokenStrList.Add("<PAD>");
+            tokenIdList.Add(Vocab!.GetTokenId("<PAD>"));
+        }
+
+        // Print the input tokens and Ids
+        Console.WriteLine("Input: {tokenStrList.Count} tokens:");
+        for (int i=0; i<tokenIdList.Count; i++)
+            Console.Write($"[{tokenStrList[i]}: {tokenIdList[i]}] ");
+        Console.Write("\n");
 
         // Get the embeddings for the input tokens.
         var embeddings = Embedding!.LookupListToMatrix(tokenIdList);
 
+        // Print the embedding matrix
+        Console.WriteLine("Embeddings:");
+        Console.WriteLine(embeddings);
+
         // Apply the positional encoding to the embeddings.
         var encodedEmbeddings = PositionalEnc!.ApplyPositionalEncoding(embeddings);
+
+        // Print the encoded embeddings
+        Console.WriteLine("Encoding:");
+        Console.WriteLine(PositionalEnc!.EncodingMatrix);
+
+        // Print the encoded embeddings
+        Console.WriteLine("Encoded Embeddings (Embeddings+Encoding):");
+        Console.WriteLine(encodedEmbeddings);
 
         // Apply the self-attention mechanism.
         var selfAttOutput = SelfAtt!.Forward(encodedEmbeddings);
 
+        // Self Attention Output
+        Console.WriteLine($"Self-Attention Output:");
+        Console.WriteLine(selfAttOutput);
+
         // Apply the feed-forward layer.
         //var feedForwardOutput = FeedForward.Apply(selfAttOutput);
 
-        // Apply the output projection layer.
-        var outputProjections = OutputProjection!.Forward(selfAttOutput);
+        // Report the next token
+        int nextTokenID = OutputProjection!.PredictNextToken(selfAttOutput);
+        string nextTokenStr = Vocab!.GetTokenString(nextTokenID);
+        Console.WriteLine($"Next Token: [{nextTokenStr}: {nextTokenID}]");
 
-        // Get the token ID of the most likely next token.
-        // var nextTokenId = Vocab.GetMostLikelyToken(outputProjections);
+        // Report the highest ranked 5 tokens
+        var topTokens = OutputProjection.TopNTokens(selfAttOutput, 5);
+        Console.WriteLine("Top 5 tokens:");
+        foreach (var (tokenId, prob) in topTokens)
+        {
+            string tokenStr = Vocab!.GetTokenString(tokenId);
+            Console.WriteLine($"- [{tokenStr}: {tokenId}] with probability {prob:F4}");
+        }
 
-        // Return the next token as a string.
-        // return Vocab.GetToken(nextTokenId);
-        return "";
+        return nextTokenStr;
     }
 
     // --------------------------------------------------------------------------------------------
@@ -206,7 +257,7 @@ public class TransformerModel
         model.Vocab            = TokenVocab.LoadFromFile(model.Filenames.VocabPath);
         model.Embedding        = EmbeddingLayer.LoadFromFile(model.Filenames.EmbeddingPath);
 
-        model.Create03_CreatePositionalEncoding();
+        model.Create03_CreatePositionalEncoding(InputLen);
 
         model.SelfAtt          = SelfAttention.LoadFromFile(model.Filenames.SelfAttPath);
         model.FeedForward      = FeedForwardLayer.LoadFromFile(model.Filenames.FeedForwardPath);
