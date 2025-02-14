@@ -4,6 +4,8 @@ using System.IO;
 using System.Linq;
 using System.Text.Json;
 using MathNet.Numerics.LinearAlgebra;
+using MathNet.Numerics.LinearAlgebra.Single;
+using MathNet.Numerics.Distributions;
 
 using MatrixF = MathNet.Numerics.LinearAlgebra.Matrix<float>;
 using VectorF = MathNet.Numerics.LinearAlgebra.Vector<float>;
@@ -43,6 +45,43 @@ public class FeedForwardLayer
     {
         return x > 0 ? x : 0;
     }
+
+    // --------------------------------------------------------------------------------------------
+    // MARK: Mutation
+    // --------------------------------------------------------------------------------------------
+
+
+    public void SetRandom()
+    {
+        W1 = MatrixF.Build.Random(d_model, d_ff);
+        b1 = VectorF.Build.Dense(d_ff, 0.0f);
+        W2 = MatrixF.Build.Random(d_ff, d_model);
+        b2 = VectorF.Build.Dense(d_model, 0.0f);
+    }
+
+    public void AddNoise(float absOffset)
+    {
+        // create a noise matrix
+        MatrixF W1_noise = DenseMatrix.Build.Random(d_model, d_ff, new ContinuousUniform(-absOffset, absOffset));
+        MatrixF W2_noise = DenseMatrix.Build.Random(d_ff, d_model, new ContinuousUniform(-absOffset, absOffset));
+
+        // add noise to the weights
+        W1 = W1 + W1_noise;
+        W2 = W2 + W2_noise;
+
+        // create a noise vector
+        VectorF b1_noise = DenseVector.Build.Random(d_ff, new ContinuousUniform(-absOffset, absOffset));
+        VectorF b2_noise = DenseVector.Build.Random(d_model, new ContinuousUniform(-absOffset, absOffset));
+
+        // add noise to the biases
+        b1 = b1 + b1_noise;
+        b2 = b2 + b2_noise;
+    }
+
+    // --------------------------------------------------------------------------------------------
+    // MARK: Prediction
+    // --------------------------------------------------------------------------------------------
+
 
     /// <summary>
     /// Forward pass for the feed-forward layer.

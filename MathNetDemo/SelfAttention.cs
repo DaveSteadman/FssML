@@ -43,6 +43,8 @@ public class SelfAttention
     }
 
     // --------------------------------------------------------------------------------------------
+    // MARK: Mutation
+    // --------------------------------------------------------------------------------------------
 
     public void SetRandomWeights(float min, float max)
     {
@@ -57,7 +59,7 @@ public class SelfAttention
         W_o = DenseMatrix.Build.Random(ModelDim, ModelDim, new ContinuousUniform(rangeMin, rangeMax));
     }
 
-    public void ApplyRandomOffset(float absOffset)
+    public void AddNoise(float absOffset)
     {
         // The offset for each value is plus/minus a random value in the range [-absOffset, absOffset].
         // A different offset is applied to each value in each matrix.
@@ -97,6 +99,8 @@ public class SelfAttention
                W_o.RowCount * W_o.ColumnCount;
     }
 
+    // --------------------------------------------------------------------------------------------
+    // MARK: Prediction
     // --------------------------------------------------------------------------------------------
 
     // Applies the self-attention mechanism to the given input.

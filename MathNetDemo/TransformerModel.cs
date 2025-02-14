@@ -150,6 +150,19 @@ public class TransformerModel
     }
 
     // --------------------------------------------------------------------------------------------
+    // MARK: Mutation
+    // --------------------------------------------------------------------------------------------
+
+    // Add random +/- noise to all model parameters.
+    public void AddNoise(float absNoiseVal)
+    {
+        Embedding?.AddNoise(absNoiseVal);
+        SelfAtt?.AddNoise(absNoiseVal);
+        FeedForward?.AddNoise(absNoiseVal);
+        OutputProjection?.AddNoise(absNoiseVal);
+    }
+
+    // --------------------------------------------------------------------------------------------
     // MARK: Prediction
     // --------------------------------------------------------------------------------------------
 
@@ -173,6 +186,9 @@ public class TransformerModel
         for (int i=0; i<tokenIdList.Count; i++)
             Console.Write($"[{tokenStrList[i]}: {tokenIdList[i]}] ");
         Console.Write("\n");
+
+        AddNoise(0.1f);
+
 
         // Get the embeddings for the input tokens.
         var embeddings = Embedding!.LookupListToMatrix(tokenIdList);
@@ -216,6 +232,9 @@ public class TransformerModel
             Console.WriteLine($"- [{tokenStr}: {tokenId}] with probability {prob:F4}");
         }
 
+        // determine the loss score
+        Console.WriteLine($"Loss: {OutputProjection!.Loss(selfAttOutput, nextTokenID)}");
+
         return nextTokenStr;
     }
 
@@ -257,7 +276,7 @@ public class TransformerModel
         model.Vocab            = TokenVocab.LoadFromFile(model.Filenames.VocabPath);
         model.Embedding        = EmbeddingLayer.LoadFromFile(model.Filenames.EmbeddingPath);
 
-        model.Create03_CreatePositionalEncoding(InputLen);
+        model.Create03_CreatePositionalEncoding(model.InputLen);
 
         model.SelfAtt          = SelfAttention.LoadFromFile(model.Filenames.SelfAttPath);
         model.FeedForward      = FeedForwardLayer.LoadFromFile(model.Filenames.FeedForwardPath);

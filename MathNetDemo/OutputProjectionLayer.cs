@@ -148,6 +148,28 @@ public class OutputProjectionLayer
     }
 
     // --------------------------------------------------------------------------------------------
+    // MARK: Mutation
+    // --------------------------------------------------------------------------------------------
+
+    public void SetRandom()
+    {
+        Weights = DenseMatrix.CreateRandom(InputDim, OutputDim, new ContinuousUniform(-1f, 1f));
+        Biases  = DenseVector.Create(OutputDim, 0f);
+    }
+
+    public void AddNoise(float absOffset)
+    {
+        // Create noise matrices.
+        MatrixF noiseW = DenseMatrix.CreateRandom(InputDim, OutputDim, new ContinuousUniform(-absOffset, absOffset));
+        VectorF noiseB = DenseVector.CreateRandom(OutputDim, new ContinuousUniform(-absOffset, absOffset));
+
+        // Add noise to the weights and biases.
+        Weights += noiseW;
+        Biases  += noiseB;
+    }
+
+
+    // --------------------------------------------------------------------------------------------
     // MARK: Training
     // --------------------------------------------------------------------------------------------
 
@@ -157,25 +179,43 @@ public class OutputProjectionLayer
     // (Both of these can be given a weighting, so we'll sum them up separately.)
     public float Loss(MatrixF forwardMatrix, int targetTokenID)
     {
-        MatrixF logits = Forward(forwardMatrix);
-        VectorF aggregated = logits.RowSums().Divide(logits.RowCount);
-        VectorF probabilities = Softmax(aggregated);
+        // MatrixF logits        = Forward(forwardMatrix);
+        // VectorF aggregated    = logits.RowSums().Divide(logits.RowCount);
+        // VectorF probabilities = Softmax(aggregated);
 
-        float correctLogit = aggregated[targetTokenID];
+        MatrixF logits = Forward(forwardMatrix);
+        // Use ColumnSums() to aggregate logits into a single vector of length OutputDim.
+        VectorF aggregated = logits.ColumnSums().Divide(logits.RowCount);
+        VectorF vocabRankings = Softmax(aggregated);
+
+        //VectorF vocabRankings = NextTokenRankings(forwardMatrix);
+
+        // Report the max and min values in the vocabRankings vector.
+        Console.WriteLine($"Max: {vocabRankings.Maximum()} Min: {vocabRankings.Minimum()}");
+
+
+        // check the sizes
+        if (vocabRankings.Count != OutputDim)
+            throw new ArgumentException($"Size mismatch: vocabRankings.Count ({vocabRankings.Count}) != OutputDim ({OutputDim})");
+        if (targetTokenID < 0 || targetTokenID >= OutputDim)
+            throw new ArgumentException($"Invalid target token ID: {targetTokenID} in vocab size {OutputDim}");
+
+        float correctLogit  = vocabRankings[targetTokenID];
         float correctWeight = 1.0f;
-        float correctBit = correctWeight * correctLogit;
+        float correctBit    = correctWeight * correctLogit;
 
         float incorrectWeight = 0.1f;
-        float incorrectBit = 0.0f;
-        for (int i = 0; i < probabilities.Count; i++)
+        float incorrectBit    = 0.0f;
+        for (int i = 0; i < vocabRankings.Count; i++)
         {
             if (i != targetTokenID)
             {
-                incorrectBit += incorrectWeight * aggregated[i];
+                // The correctness is the inverse of the probability for incorrect tokens.
+                incorrectBit += incorrectWeight * (1 - vocabRankings[i]);
             }
         }
 
-        return correctBit - incorrectBit;
+        return correctBit + incorrectBit;
     }
 
     // --------------------------------------------------------------------------------------------

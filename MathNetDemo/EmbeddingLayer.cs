@@ -97,7 +97,7 @@ public class EmbeddingLayer
 
     // --------------------------------------------------------------------------------------------
 
-    public void ApplyRandomOffset(float absOffset)
+    public void AddNoise(float absOffset)
     {
         float halfOffset = (float)absOffset / 2f;
         for (int i = 0; i < VocabSize; i++)
