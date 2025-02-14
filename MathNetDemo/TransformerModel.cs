@@ -233,7 +233,7 @@ public class TransformerModel
         }
 
         // determine the loss score
-        Console.WriteLine($"Loss: {OutputProjection!.Loss(selfAttOutput, nextTokenID)}");
+        Console.WriteLine($"Loss: {OutputProjection!.Loss(selfAttOutput, nextTokenID - 1)}");
 
         return nextTokenStr;
     }

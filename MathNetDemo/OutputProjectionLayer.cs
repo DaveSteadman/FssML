@@ -168,31 +168,20 @@ public class OutputProjectionLayer
         Biases  += noiseB;
     }
 
-
     // --------------------------------------------------------------------------------------------
     // MARK: Training
     // --------------------------------------------------------------------------------------------
 
-    // For a Loss function, we can sum up "all the good bits" of an output vector:
-    // - The magnitude of the correct token index.
-    // - The invernse magnitude of the other token indices.
-    // (Both of these can be given a weighting, so we'll sum them up separately.)
+    // For a Loss function:
+    // - Score the right selected token, its magnitude is proportional to the probability of the token.
+
     public float Loss(MatrixF forwardMatrix, int targetTokenID)
     {
-        // MatrixF logits        = Forward(forwardMatrix);
-        // VectorF aggregated    = logits.RowSums().Divide(logits.RowCount);
-        // VectorF probabilities = Softmax(aggregated);
+        float retScore = 0f;
 
-        MatrixF logits = Forward(forwardMatrix);
-        // Use ColumnSums() to aggregate logits into a single vector of length OutputDim.
-        VectorF aggregated = logits.ColumnSums().Divide(logits.RowCount);
+        MatrixF logits        = Forward(forwardMatrix);
+        VectorF aggregated    = logits.ColumnSums().Divide(logits.RowCount);
         VectorF vocabRankings = Softmax(aggregated);
-
-        //VectorF vocabRankings = NextTokenRankings(forwardMatrix);
-
-        // Report the max and min values in the vocabRankings vector.
-        Console.WriteLine($"Max: {vocabRankings.Maximum()} Min: {vocabRankings.Minimum()}");
-
 
         // check the sizes
         if (vocabRankings.Count != OutputDim)
@@ -200,22 +189,26 @@ public class OutputProjectionLayer
         if (targetTokenID < 0 || targetTokenID >= OutputDim)
             throw new ArgumentException($"Invalid target token ID: {targetTokenID} in vocab size {OutputDim}");
 
-        float correctLogit  = vocabRankings[targetTokenID];
-        float correctWeight = 1.0f;
-        float correctBit    = correctWeight * correctLogit;
+        // Report the max and min values in the vocabRankings vector.
+        Console.WriteLine($"Max: {vocabRankings.Maximum()} Min: {vocabRankings.Minimum()}");
 
-        float incorrectWeight = 0.1f;
-        float incorrectBit    = 0.0f;
-        for (int i = 0; i < vocabRankings.Count; i++)
+        // Score the correctly selected token.
+        var topTokens = TopNTokens(forwardMatrix, 5);
+        if (topTokens.Length != 5)
+            throw new ArgumentException("TopNTokens did not return 5 tokens");
+        if (topTokens[0].tokenId == targetTokenID)
         {
-            if (i != targetTokenID)
-            {
-                // The correctness is the inverse of the probability for incorrect tokens.
-                incorrectBit += incorrectWeight * (1 - vocabRankings[i]);
-            }
+            retScore += 50f * topTokens[0].probability;
+
+            // score the gap to the second token
+            retScore += 10f * (topTokens[0].probability - topTokens[1].probability);
+        }
+        else // else, score it negatively on its ranking
+        {
+            retScore -= (1 - vocabRankings[targetTokenID]) * 10f;
         }
 
-        return correctBit + incorrectBit;
+        return retScore;
     }
 
     // --------------------------------------------------------------------------------------------
