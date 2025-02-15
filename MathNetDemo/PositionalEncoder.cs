@@ -12,6 +12,8 @@ public class PositionalEncoder
     private MatrixF positionalEncoding;
     public MatrixF EncodingMatrix => positionalEncoding;
 
+    public int InputLength => sequenceLength;
+
     /// <summary>
     /// Initializes a new instance of the PositionalEncoder class
     /// and computes the positional encoding matrix.
@@ -50,6 +52,19 @@ public class PositionalEncoder
         return pe;
     }
 
+    // --------------------------------------------------------------------------------------------
+    // MARK: Deep Copy
+    // --------------------------------------------------------------------------------------------
+
+    public PositionalEncoder DeepCopy()
+    {
+        PositionalEncoder newEncoder = new PositionalEncoder(sequenceLength, embeddingDim);
+        newEncoder.positionalEncoding = positionalEncoding.Clone();
+        return newEncoder;
+    }
+
+    // --------------------------------------------------------------------------------------------
+
     /// <summary>
     /// Applies the stored positional encoding to the provided embeddings.
     /// </summary>
@@ -79,8 +94,8 @@ public class PositionalEncoder
     /// <param name="newEmbeddingDim">The new embedding dimension.</param>
     public void RecreatePositionalEncoding(int newSequenceLength, int newEmbeddingDim)
     {
-        this.sequenceLength = newSequenceLength;
-        this.embeddingDim = newEmbeddingDim;
+        this.sequenceLength     = newSequenceLength;
+        this.embeddingDim       = newEmbeddingDim;
         this.positionalEncoding = CreatePositionalEncoding();
     }
 }

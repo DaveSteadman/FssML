@@ -27,6 +27,20 @@ public class OutputProjectionLayer
 
     public int ParamCount() => InputDim * OutputDim + OutputDim;
 
+
+    // --------------------------------------------------------------------------------------------
+    // MARK: Deep Copy
+    // --------------------------------------------------------------------------------------------
+
+    public OutputProjectionLayer DeepCopy()
+    {
+        OutputProjectionLayer newLayer = new OutputProjectionLayer(InputDim, OutputDim);
+        newLayer.Weights = Weights.Clone();
+        newLayer.Biases  = Biases.Clone();
+        return newLayer;
+    }
+
+
     // --------------------------------------------------------------------------------------------
     // MARK: Prediction
     // --------------------------------------------------------------------------------------------

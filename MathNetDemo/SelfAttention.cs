@@ -43,6 +43,20 @@ public class SelfAttention
     }
 
     // --------------------------------------------------------------------------------------------
+    // MARK: Deep Copy
+    // --------------------------------------------------------------------------------------------
+
+    public SelfAttention DeepCopy()
+    {
+        SelfAttention newLayer = new SelfAttention(ModelDim);
+        newLayer.W_q = W_q.Clone();
+        newLayer.W_k = W_k.Clone();
+        newLayer.W_v = W_v.Clone();
+        newLayer.W_o = W_o.Clone();
+        return newLayer;
+    }
+
+    // --------------------------------------------------------------------------------------------
     // MARK: Mutation
     // --------------------------------------------------------------------------------------------
 

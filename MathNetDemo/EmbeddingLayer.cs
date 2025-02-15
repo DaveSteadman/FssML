@@ -29,6 +29,17 @@ public class EmbeddingLayer
     }
 
     // --------------------------------------------------------------------------------------------
+    // MARK: Deep Copy
+    // --------------------------------------------------------------------------------------------
+
+    public EmbeddingLayer DeepCopy()
+    {
+        EmbeddingLayer newLayer = new EmbeddingLayer(VocabSize, EmbeddingDim);
+        newLayer.EmbeddingMatrix = EmbeddingMatrix.Clone();
+        return newLayer;
+    }
+
+    // --------------------------------------------------------------------------------------------
     // MARK: Query
     // --------------------------------------------------------------------------------------------
 

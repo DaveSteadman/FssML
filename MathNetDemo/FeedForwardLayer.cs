@@ -47,6 +47,20 @@ public class FeedForwardLayer
     }
 
     // --------------------------------------------------------------------------------------------
+    // MARK: Deep Copy
+    // --------------------------------------------------------------------------------------------
+
+    public FeedForwardLayer DeepCopy()
+    {
+        FeedForwardLayer newLayer = new FeedForwardLayer(d_model, d_ff);
+        newLayer.W1 = W1.Clone();
+        newLayer.b1 = b1.Clone();
+        newLayer.W2 = W2.Clone();
+        newLayer.b2 = b2.Clone();
+        return newLayer;
+    }
+
+    // --------------------------------------------------------------------------------------------
     // MARK: Mutation
     // --------------------------------------------------------------------------------------------
 

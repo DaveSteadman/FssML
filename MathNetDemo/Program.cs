@@ -546,34 +546,22 @@ namespace MathNetDemo
         }
 
         // --------------------------------------------------------------------------------------------
-        // MARK: Demo
+        // MARK: v0.4
         // --------------------------------------------------------------------------------------------
 
-        public static void DemoTinyML()
+        public static void DemoFirstModelRun()
         {
-            // Load the input string from file
+            string modeldirname = "./Model_002";
             string input = File.ReadAllText("SampleStr.txt");
 
-            TokenVocab vocab = new ();
+            //TrainingFramework.CreateInitialModel(modeldirname);
 
-            // Add the vocab
-            int currIterationcount = 0;
-            int prevCount = 0;
-            while (vocab.Count < 500)
-            {
-                vocab.ApplyBPEIteration(input, 30);
-                Console.Write($"{vocab.Count} ");
 
-                // Break out of the loop in case we aren't making progress, either but loops or by count
-                if (currIterationcount > 500) break;
-                if (vocab.Count == prevCount) break;
-                currIterationcount++;
-                prevCount = vocab.Count;
-            }
-            vocab.SaveToFile("./vocab2.txt");
-            TokenVocab.PerformLimitSizePass("./vocab2.txt", 500);
-
+            TrainingFramework.TrainModel(modeldirname, input);
         }
+
+
+
 
         // --------------------------------------------------------------------------------------------
         // MARK: Main
@@ -591,8 +579,9 @@ namespace MathNetDemo
             //DemoEmbeddings2();
             //DemoPositionalEncoding();
 
-            DemoMakeModel();
+            //DemoMakeModel();
 
+            DemoFirstModelRun();
             //DemoTinyML();
         }
     }

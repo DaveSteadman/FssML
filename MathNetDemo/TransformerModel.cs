@@ -6,7 +6,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Text.Json;
+using System.Text;
 
 using MathNet.Numerics.Distributions;
 using MathNet.Numerics.LinearAlgebra;
@@ -61,6 +61,8 @@ public class TransformerModel
 
         Filenames = new(DirPath);
     }
+
+
 
     // --------------------------------------------------------------------------------------------
     // MARK: Create Model
@@ -147,6 +149,26 @@ public class TransformerModel
             throw new Exception("Feed-forward must be created before creating the output projection.");
 
         OutputProjection = new OutputProjectionLayer(EmbeddingDim, Vocab!.Count);
+    }
+
+    // --------------------------------------------------------------------------------------------
+    // MARK: Deep Copy
+    // --------------------------------------------------------------------------------------------
+
+    // Create a complete duplicate of the model
+
+    public TransformerModel DeepCopy()
+    {
+        TransformerModel newModel = new TransformerModel(DirPath);
+
+        newModel.Vocab            = Vocab!.DeepCopy();
+        newModel.Embedding        = Embedding!.DeepCopy();
+        newModel.PositionalEnc    = PositionalEnc!.DeepCopy();
+        newModel.SelfAtt          = SelfAtt!.DeepCopy();
+        newModel.FeedForward      = FeedForward!.DeepCopy();
+        newModel.OutputProjection = OutputProjection!.DeepCopy();
+
+        return newModel;
     }
 
     // --------------------------------------------------------------------------------------------
@@ -238,6 +260,98 @@ public class TransformerModel
         return nextTokenStr;
     }
 
+    public float PredictionLoss(List<int> tokenIdList, int expectedNextTokenId)
+    {
+        // // Tokenize the input text.
+        // List<string> tokenStrList = Vocab!.TokenizeToStrings(inputText);
+        // List<int>    tokenIdList  = Vocab!.TokenizeToIds(inputText);
+
+        // // trim to the right length, either the last n tokens or the whole list with padding if needed
+        // if (tokenIdList.Count > InputLen)
+        //     tokenIdList = tokenIdList.GetRange(tokenIdList.Count - InputLen, InputLen);
+        // while (tokenIdList.Count < InputLen)
+        // {
+        //     tokenStrList.Add("<PAD>");
+        //     tokenIdList.Add(Vocab!.GetTokenId("<PAD>"));
+        // }
+
+        // // Print the input tokens and Ids
+        // Console.WriteLine("Input: {tokenStrList.Count} tokens:");
+        // for (int i=0; i<tokenIdList.Count; i++)
+        //     Console.Write($"[{tokenStrList[i]}: {tokenIdList[i]}] ");
+        // Console.Write("\n");
+
+        // AddNoise(0.1f);
+
+
+        // Get the embeddings for the input tokens.
+        var embeddings = Embedding!.LookupListToMatrix(tokenIdList);
+
+        // Print the embedding matrix
+        // Console.WriteLine("Embeddings:");
+        // Console.WriteLine(embeddings);
+
+        // Apply the positional encoding to the embeddings.
+        var encodedEmbeddings = PositionalEnc!.ApplyPositionalEncoding(embeddings);
+
+        // Print the encoded embeddings
+        // Console.WriteLine("Encoding:");
+        // Console.WriteLine(PositionalEnc!.EncodingMatrix);
+
+        // Print the encoded embeddings
+        // Console.WriteLine("Encoded Embeddings (Embeddings+Encoding):");
+        // Console.WriteLine(encodedEmbeddings);
+
+        // Apply the self-attention mechanism.
+        var selfAttOutput = SelfAtt!.Forward(encodedEmbeddings);
+
+        // Self Attention Output
+        // Console.WriteLine($"Self-Attention Output:");
+        // Console.WriteLine(selfAttOutput);
+
+        // Apply the feed-forward layer.
+        //var feedForwardOutput = FeedForward.Apply(selfAttOutput);
+
+        // Report the next token
+        // int nextTokenID = OutputProjection!.PredictNextToken(selfAttOutput);
+        // string nextTokenStr = Vocab!.GetTokenString(nextTokenID);
+        // Console.WriteLine($"Next Token: [{nextTokenStr}: {nextTokenID}]");
+
+        // // Report the highest ranked 5 tokens
+        // var topTokens = OutputProjection.TopNTokens(selfAttOutput, 5);
+        // Console.WriteLine("Top 5 tokens:");
+        // foreach (var (tokenId, prob) in topTokens)
+        // {
+        //     string tokenStr = Vocab!.GetTokenString(tokenId);
+        //     Console.WriteLine($"- [{tokenStr}: {tokenId}] with probability {prob:F4}");
+        // }
+
+        // // determine the loss score
+        // Console.WriteLine($"Loss: {OutputProjection!.Loss(selfAttOutput, nextTokenID - 1)}");
+
+        float loss = OutputProjection!.Loss(selfAttOutput, expectedNextTokenId);
+
+        return loss;
+    }
+
+
+    // --------------------------------------------------------------------------------------------
+    // MARK: Report
+    // --------------------------------------------------------------------------------------------
+
+    public string Report()
+    {
+        StringBuilder sb = new StringBuilder();
+
+        sb.AppendLine("Model Report");
+        sb.AppendLine("------------");
+        sb.AppendLine($"Objects Present: [Vocab: {Vocab != null}] [Embedding: {Embedding != null}] [Positional Encoding: {PositionalEnc != null}] [Self-Attention: {SelfAtt != null}] [Feed-Forward: {FeedForward != null}] [Output Projection: {OutputProjection != null}]");
+        sb.AppendLine($"Vocab Size: {Vocab!.Count}");
+        sb.AppendLine($"Embedding Dimension: {EmbeddingDim}");
+
+        return sb.ToString();
+    }
+
     // --------------------------------------------------------------------------------------------
     // MARK: Serialization
     // --------------------------------------------------------------------------------------------
@@ -281,6 +395,10 @@ public class TransformerModel
         model.SelfAtt          = SelfAttention.LoadFromFile(model.Filenames.SelfAttPath);
         model.FeedForward      = FeedForwardLayer.LoadFromFile(model.Filenames.FeedForwardPath);
         model.OutputProjection = OutputProjectionLayer.LoadFromFile(model.Filenames.OutputProjectionPath);
+
+        model.InputLen     = model.SelfAtt.;
+        model.EmbeddingDim = model.Embedding!.EmbeddingDim;
+
 
         return model;
     }
