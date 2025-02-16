@@ -53,6 +53,15 @@ public class PositionalEncoder
     }
 
     // --------------------------------------------------------------------------------------------
+    // MARK: Report
+    // --------------------------------------------------------------------------------------------
+
+    public string Report()
+    {
+        return $"PositionalEncoder // Sequence Length: {sequenceLength} // Embedding Dimension: {embeddingDim} // Encoding Shape(RowxCol): [{positionalEncoding.RowCount} x {positionalEncoding.ColumnCount}]";
+    }
+
+    // --------------------------------------------------------------------------------------------
     // MARK: Deep Copy
     // --------------------------------------------------------------------------------------------
 

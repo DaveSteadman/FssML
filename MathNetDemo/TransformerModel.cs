@@ -18,6 +18,7 @@ using VectorF = MathNet.Numerics.LinearAlgebra.Vector<float>;  // Alias for Vect
 
 public struct TransformerModelFilenames
 {
+    public string ModelPath            { get; set; }
     public string VocabPath            { get; set; }
     public string EmbeddingPath        { get; set; }
     public string SelfAttPath          { get; set; }
@@ -26,6 +27,7 @@ public struct TransformerModelFilenames
 
     public TransformerModelFilenames(string dirPath)
     {
+        ModelPath            = System.IO.Path.Combine(dirPath, "model.txt");
         VocabPath            = System.IO.Path.Combine(dirPath, "vocab.txt");
         EmbeddingPath        = System.IO.Path.Combine(dirPath, "embedding.txt");
         SelfAttPath          = System.IO.Path.Combine(dirPath, "selfatt.txt");
@@ -34,10 +36,68 @@ public struct TransformerModelFilenames
     }
 }
 
+// --------------------------------------------------------------------------------------------
+// --------------------------------------------------------------------------------------------
+// --------------------------------------------------------------------------------------------
+
+public struct TransformerModelDetails
+{
+    public int VocabSize;
+    public int EmbeddingDim;
+    public int FFHiddenDim;
+    public int InputLen;
+
+    public TransformerModelDetails()
+    {
+        VocabSize = 0;
+        EmbeddingDim = 0;
+        FFHiddenDim = 0;
+        InputLen = 0;
+    }
+
+    public TransformerModelDetails(int vocabSize, int embeddingDim, int ffHiddenDim, int inputLen)
+    {
+        VocabSize    = vocabSize;
+        EmbeddingDim = embeddingDim;
+        FFHiddenDim  = ffHiddenDim;
+        InputLen     = inputLen;
+    }
+
+    // LoadSave
+    public void SaveToFile(string filepath)
+    {
+        using (var writer = new StreamWriter(filepath, false, Encoding.UTF8))
+        {
+            writer.WriteLine(VocabSize);
+            writer.WriteLine(EmbeddingDim);
+            writer.WriteLine(FFHiddenDim);
+            writer.WriteLine(InputLen);
+        }
+    }
+    public static TransformerModelDetails LoadFromFile(string filepath)
+    {
+        TransformerModelDetails newDetails = new();
+
+        using (var reader = new StreamReader(filepath, Encoding.UTF8))
+        {
+            newDetails.VocabSize    = int.Parse(reader.ReadLine());
+            newDetails.EmbeddingDim = int.Parse(reader.ReadLine());
+            newDetails.FFHiddenDim  = int.Parse(reader.ReadLine());
+            newDetails.InputLen     = int.Parse(reader.ReadLine());
+        }
+        return newDetails;
+    }
+}
+
+// --------------------------------------------------------------------------------------------
+// --------------------------------------------------------------------------------------------
+// --------------------------------------------------------------------------------------------
+
 public class TransformerModel
 {
     public string            DirPath     { get; set; } = "";
     public TransformerModelFilenames Filenames;
+    public TransformerModelDetails ModelDetails = new TransformerModelDetails();
 
     public TokenVocab?            Vocab            { get; set; } = null;
     public EmbeddingLayer?        Embedding        { get; set; } = null;
@@ -45,10 +105,6 @@ public class TransformerModel
     public SelfAttention?         SelfAtt          { get; set; } = null;
     public FeedForwardLayer?      FeedForward      { get; set; } = null;
     public OutputProjectionLayer? OutputProjection { get; set; } = null;
-
-    public int EmbeddingDim = 0;
-    public int FFHiddenDim  = 0;
-    public int InputLen     = 10;
 
     // --------------------------------------------------------------------------------------------
     // MARK: Constructor
@@ -99,23 +155,25 @@ public class TransformerModel
         Vocab.SaveToFile(Filenames.VocabPath);
         TokenVocab.PerformLimitSizePass(Filenames.VocabPath, targetTokenCount);
         Vocab = TokenVocab.LoadFromFile(Filenames.VocabPath);
+
+        ModelDetails.VocabSize = Vocab.Count;
     }
 
     public void Create02_CreateEmbedding(int embeddingDim)
     {
-        EmbeddingDim = embeddingDim;
+        ModelDetails.EmbeddingDim = embeddingDim;
 
         if (Vocab == null)
             throw new Exception("Vocab must be created before creating the embedding layer.");
 
-        Embedding = new EmbeddingLayer(Vocab!.Count, EmbeddingDim);
+        Embedding = new EmbeddingLayer(Vocab!.Count, ModelDetails.EmbeddingDim);
 
         Embedding.SaveToFile(Filenames.EmbeddingPath);
     }
 
     public void Create03_CreatePositionalEncoding(int inputLen)
     {
-        InputLen = 10;
+        ModelDetails.InputLen = 10;
 
         if (Embedding == null)
             throw new Exception("Embedding must be created before creating the positional encoding.");
@@ -123,7 +181,7 @@ public class TransformerModel
         // Create the positional encoding matrix.
         // PositionalEncoding = new PositionalEncoding(EmbeddingDim, MaxLength);
 
-        PositionalEnc = new PositionalEncoder(InputLen, EmbeddingDim);
+        PositionalEnc = new PositionalEncoder(ModelDetails.InputLen, ModelDetails.EmbeddingDim);
     }
 
     public void Create04_CreateSelfAttention()
@@ -131,7 +189,7 @@ public class TransformerModel
         if (Embedding == null)
             throw new Exception("Embedding must be created before creating the self-attention layer.");
 
-        SelfAtt = new SelfAttention(EmbeddingDim);
+        SelfAtt = new SelfAttention(ModelDetails.InputLen, ModelDetails.EmbeddingDim);
     }
 
     public void Create05_CreateFeedForward()
@@ -139,8 +197,8 @@ public class TransformerModel
         if (SelfAtt == null)
             throw new Exception("Self-attention must be created before creating the feed-forward layer.");
 
-        FFHiddenDim = EmbeddingDim * 4;
-        FeedForward = new FeedForwardLayer(EmbeddingDim, FFHiddenDim);
+        ModelDetails.FFHiddenDim = ModelDetails.EmbeddingDim * 4;
+        FeedForward = new FeedForwardLayer(ModelDetails.EmbeddingDim, ModelDetails.FFHiddenDim);
     }
 
     public void Create06_CreateOutputProjection()
@@ -148,7 +206,7 @@ public class TransformerModel
         if (FeedForward == null)
             throw new Exception("Feed-forward must be created before creating the output projection.");
 
-        OutputProjection = new OutputProjectionLayer(EmbeddingDim, Vocab!.Count);
+        OutputProjection = new OutputProjectionLayer(ModelDetails.EmbeddingDim, Vocab!.Count);
     }
 
     // --------------------------------------------------------------------------------------------
@@ -160,6 +218,8 @@ public class TransformerModel
     public TransformerModel DeepCopy()
     {
         TransformerModel newModel = new TransformerModel(DirPath);
+
+        newModel.ModelDetails     = ModelDetails;
 
         newModel.Vocab            = Vocab!.DeepCopy();
         newModel.Embedding        = Embedding!.DeepCopy();
@@ -195,9 +255,9 @@ public class TransformerModel
         List<int>    tokenIdList  = Vocab!.TokenizeToIds(inputText);
 
         // trim to the right length, either the last n tokens or the whole list with padding if needed
-        if (tokenIdList.Count > InputLen)
-            tokenIdList = tokenIdList.GetRange(tokenIdList.Count - InputLen, InputLen);
-        while (tokenIdList.Count < InputLen)
+        if (tokenIdList.Count > ModelDetails.InputLen)
+            tokenIdList = tokenIdList.GetRange(tokenIdList.Count - ModelDetails.InputLen, ModelDetails.InputLen);
+        while (tokenIdList.Count < ModelDetails.InputLen)
         {
             tokenStrList.Add("<PAD>");
             tokenIdList.Add(Vocab!.GetTokenId("<PAD>"));
@@ -347,7 +407,10 @@ public class TransformerModel
         sb.AppendLine("------------");
         sb.AppendLine($"Objects Present: [Vocab: {Vocab != null}] [Embedding: {Embedding != null}] [Positional Encoding: {PositionalEnc != null}] [Self-Attention: {SelfAtt != null}] [Feed-Forward: {FeedForward != null}] [Output Projection: {OutputProjection != null}]");
         sb.AppendLine($"Vocab Size: {Vocab!.Count}");
-        sb.AppendLine($"Embedding Dimension: {EmbeddingDim}");
+        sb.AppendLine($"Embedding: {Embedding!.Report()}");
+        sb.AppendLine($"Positional Encoding: {PositionalEnc!.Report()}");
+        sb.AppendLine($"Self-Attention: {SelfAtt!.Report()}");
+        sb.AppendLine($"Output Projection: {OutputProjection!.Report()}");
 
         return sb.ToString();
     }
@@ -373,6 +436,7 @@ public class TransformerModel
         // string modelJson = JsonSerializer.Serialize(this);
         // File.WriteAllText(modelPath, modelJson);
 
+        ModelDetails.SaveToFile(Filenames.ModelPath);
         Vocab?.SaveToFile(Filenames.VocabPath);
         Embedding?.SaveToFile(Filenames.EmbeddingPath);
         SelfAtt?.SaveToFile(Filenames.SelfAttPath);
@@ -385,20 +449,17 @@ public class TransformerModel
     public static TransformerModel LoadModel(string dirPath)
     {
         TransformerModel model = new TransformerModel(dirPath);
+        model.ModelDetails = TransformerModelDetails.LoadFromFile(model.Filenames.ModelPath);
 
         // Load the model parameters from a JSON file.
         model.Vocab            = TokenVocab.LoadFromFile(model.Filenames.VocabPath);
         model.Embedding        = EmbeddingLayer.LoadFromFile(model.Filenames.EmbeddingPath);
 
-        model.Create03_CreatePositionalEncoding(model.InputLen);
+        model.Create03_CreatePositionalEncoding(model.ModelDetails.InputLen);
 
         model.SelfAtt          = SelfAttention.LoadFromFile(model.Filenames.SelfAttPath);
         model.FeedForward      = FeedForwardLayer.LoadFromFile(model.Filenames.FeedForwardPath);
         model.OutputProjection = OutputProjectionLayer.LoadFromFile(model.Filenames.OutputProjectionPath);
-
-        model.InputLen     = model.SelfAtt.;
-        model.EmbeddingDim = model.Embedding!.EmbeddingDim;
-
 
         return model;
     }

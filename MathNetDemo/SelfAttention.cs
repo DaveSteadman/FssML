@@ -9,6 +9,7 @@ using VectorF = MathNet.Numerics.LinearAlgebra.Vector<float>;
 public class SelfAttention
 {
     // The dimensionality of the model (and of the query, key, value vectors).
+    public int InputLen { get; private set;}
     public int ModelDim { get; private set; }
 
     // Weight matrix for computing queries. Shape: (ModelDim, ModelDim)
@@ -27,8 +28,9 @@ public class SelfAttention
 
     // Creates a new self-attention layer with the given model dimensionality.
     // modelDim: The size of the model and each token’s embedding vector.</param>
-    public SelfAttention(int modelDim)
+    public SelfAttention(int inputLen, int modelDim)
     {
+        InputLen = inputLen;
         ModelDim = modelDim;
 
         // Create a uniform distribution for small random initialization.
@@ -48,7 +50,7 @@ public class SelfAttention
 
     public SelfAttention DeepCopy()
     {
-        SelfAttention newLayer = new SelfAttention(ModelDim);
+        SelfAttention newLayer = new SelfAttention(InputLen, ModelDim);
         newLayer.W_q = W_q.Clone();
         newLayer.W_k = W_k.Clone();
         newLayer.W_v = W_v.Clone();
@@ -182,6 +184,15 @@ public class SelfAttention
     }
 
     // --------------------------------------------------------------------------------------------
+    // MARK: Report
+    // --------------------------------------------------------------------------------------------
+
+    public string Report()
+    {
+        return $"SelfAttention // Input Length: {InputLen} // Model Dimension: {ModelDim} // Parameter Count: {ParamCount()} // Weight Shapes (RowxCol): [Q: {W_q.RowCount}x{W_q.ColumnCount}, K: {W_k.RowCount}x{W_k.ColumnCount}, V: {W_v.RowCount}x{W_v.ColumnCount}, O: {W_o.RowCount}x{W_o.ColumnCount}]";
+    }
+
+    // --------------------------------------------------------------------------------------------
     // MARK: Load Save
     // --------------------------------------------------------------------------------------------
 
@@ -191,6 +202,7 @@ public class SelfAttention
         using (var writer = new StreamWriter(path))
         {
             // Write the model dimension.
+            writer.WriteLine(InputLen);
             writer.WriteLine(ModelDim);
 
             string q_string = MatrixOperations.MatrixToString(W_q);
@@ -213,6 +225,7 @@ public class SelfAttention
         using (var reader = new StreamReader(path))
         {
             // Read the model dimension.
+            int inputLen = int.Parse(reader.ReadLine());
             int modelDim = int.Parse(reader.ReadLine());
 
             string? q_string = reader.ReadLine();
@@ -240,7 +253,7 @@ public class SelfAttention
 
             // Create a new SelfAttention instance.
             // (The constructor will initialize random weights, but we overwrite them below.)
-            SelfAttention layer = new SelfAttention(modelDim);
+            SelfAttention layer = new SelfAttention(inputLen, modelDim);
 
             if (q_read_ok) layer.W_q = newQ!;
             if (k_read_ok) layer.W_k = newK!;

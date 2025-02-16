@@ -259,6 +259,15 @@ public class OutputProjectionLayer
     }
 
     // --------------------------------------------------------------------------------------------
+    // MARK: Report
+    // --------------------------------------------------------------------------------------------
+
+    public string Report()
+    {
+        return $"OutputProjectionLayer // InputDim: {InputDim} // OutputDim: {OutputDim} // Weights Shape(RowxCol): [{Weights.RowCount} x {Weights.ColumnCount}] // Biases Length: {Biases.Count}";
+    }
+
+    // --------------------------------------------------------------------------------------------
     // MARK: Serialization
     // --------------------------------------------------------------------------------------------
 

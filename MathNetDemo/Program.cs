@@ -477,7 +477,7 @@ namespace MathNetDemo
             Console.WriteLine("Normalized Combined Embeddings:");
             Console.WriteLine(normalizedCombinedEmbeddings.ToString());
 
-            SelfAttention selfAttention = new SelfAttention(embeddingDim);
+            SelfAttention selfAttention = new SelfAttention(inputSize, embeddingDim);
             selfAttention.SaveToFile("./self-attention.json");
 
             MatrixF selfAttOutput = selfAttention.Forward(combinedEmbeddings);
@@ -542,6 +542,8 @@ namespace MathNetDemo
 
             TransformerModel model2  = TransformerModel.LoadModel("./Model_001");
 
+            Console.Write($"{model2.Report()}");
+
             //model2.
         }
 
@@ -579,9 +581,9 @@ namespace MathNetDemo
             //DemoEmbeddings2();
             //DemoPositionalEncoding();
 
-            //DemoMakeModel();
+            DemoMakeModel();
 
-            DemoFirstModelRun();
+            //DemoFirstModelRun();
             //DemoTinyML();
         }
     }
