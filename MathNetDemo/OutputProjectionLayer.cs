@@ -197,6 +197,18 @@ public class OutputProjectionLayer
         VectorF aggregated    = logits.ColumnSums().Divide(logits.RowCount);
         VectorF vocabRankings = Softmax(aggregated);
 
+        // Normalise the aggregated vector to a 0 to 1 range.
+        aggregated = aggregated.Normalize(1);
+
+        float min = aggregated.Minimum();
+        float max = aggregated.Maximum();
+        VectorF normalizedaggregated = aggregated.Map(x => (x - min) / (max - min));
+
+        //Console.WriteLine($"Debug: Agregated Range: {normalizedaggregated.Minimum()} - {normalizedaggregated.Maximum()}");
+       // Console.WriteLine($"Debug: aggregated: {normalizedaggregated}");
+
+
+
         // check the sizes
         if (vocabRankings.Count != OutputDim)
             throw new ArgumentException($"Size mismatch: vocabRankings.Count ({vocabRankings.Count}) != OutputDim ({OutputDim})");
@@ -221,10 +233,13 @@ public class OutputProjectionLayer
         {
             // score the magnitude of the right value in the correct token
             retScore += 10f * vocabRankings[targetTokenID];
+            retScore = vocabRankings[targetTokenID];
         }
 
+        retScore += 1000f * normalizedaggregated[targetTokenID];
 
-        retScore = vocabRankings[targetTokenID];
+        // Subtract the sum of all other probabilities.
+        retScore -= normalizedaggregated.Sum();
 
 
         return retScore;

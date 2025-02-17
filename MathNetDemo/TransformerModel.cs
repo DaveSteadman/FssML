@@ -238,17 +238,10 @@ public class TransformerModel
     // Add random +/- noise to all model parameters.
     public void AddNoise(float absNoiseVal, int passcycle = 0)
     {
-        if (passcycle % 4 == 0)
-            Embedding?.AddNoise(absNoiseVal);
-
-        if (passcycle % 4 == 1)
-            SelfAtt?.AddNoise(absNoiseVal);
-
-        if (passcycle % 4 == 2)
-            FeedForward?.AddNoise(absNoiseVal);
-
-        if (passcycle % 4 == 3)
-            OutputProjection?.AddNoise(absNoiseVal);
+        Embedding?.AddNoise(absNoiseVal);
+        SelfAtt?.AddNoise(absNoiseVal);
+        FeedForward?.AddNoise(absNoiseVal);
+        OutputProjection?.AddNoise(absNoiseVal);
     }
 
     // --------------------------------------------------------------------------------------------

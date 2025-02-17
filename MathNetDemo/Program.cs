@@ -553,17 +553,13 @@ namespace MathNetDemo
 
         public static void DemoFirstModelRun()
         {
-            string modeldirname = "./Model_002";
+            string modeldirname = "./Model_005";
             string input = File.ReadAllText("SampleStr.txt");
 
-            TrainingFramework.CreateInitialModel(modeldirname);
-
+            //TrainingFramework.CreateInitialModel(modeldirname);
 
             TrainingFramework.TrainModel(modeldirname, input);
         }
-
-
-
 
         // --------------------------------------------------------------------------------------------
         // MARK: Main

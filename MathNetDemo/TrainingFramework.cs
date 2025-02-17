@@ -54,11 +54,10 @@ public static class TrainingFramework
 
         for (int i = 0; i < numPasses; i++)
         {
-            Console.WriteLine($"--- Training Pass {i} // {baselinePredictionScore} --- ");
 
             // Create a deep copy of the model
             TransformerModel modelMutation = model.DeepCopy();
-            modelMutation.AddNoise(0.1f, i);
+            modelMutation.AddNoise(0.4f, i);
 
             //Console.WriteLine($"Checksums: Original {model.CheckSum()} // Mutation {modelMutation.CheckSum()}");
 
@@ -77,8 +76,12 @@ public static class TrainingFramework
                 baselinePredictionScore = newPredictionScore;
             }
 
-            model.SaveModel();
+            Console.WriteLine($"--- Training Pass {i} // {baselinePredictionScore} // {newPredictionScore} --- ");
+
+
         }
+        model.DirPath = "./Model_005";
+        model.SaveModel();
     }
 
     private static List<TrainingInput> ConstructTrainingPass(TransformerModel model, string trainingdata)
