@@ -335,6 +335,24 @@ public class TransformerModel
         return nextTokenStr;
     }
 
+    public int PredictNextToken(List<int> tokenIdList)
+    {
+        // Get the embeddings for the input tokens.
+        var embeddings = Embedding!.LookupListToMatrix(tokenIdList);
+
+        // Apply the positional encoding to the embeddings.
+        var encodedEmbeddings = PositionalEnc!.ApplyPositionalEncoding(embeddings);
+
+        // Apply the self-attention mechanism.
+        var selfAttOutput = SelfAtt!.Forward(encodedEmbeddings);
+
+        // Report the next token
+        int nextTokenID = OutputProjection!.PredictNextToken(selfAttOutput);
+
+        return nextTokenID;
+    }
+
+
     public float PredictionScore(List<int> tokenIdList, int expectedNextTokenId)
     {
         // // Tokenize the input text.

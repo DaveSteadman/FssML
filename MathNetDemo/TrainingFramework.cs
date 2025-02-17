@@ -56,6 +56,7 @@ public static class TrainingFramework
         int numPasses = 500;
         float noiseVal = 1f;
 
+        List<float> last10Scores = new List<float>();
 
         for (int i = 0; i < numPasses; i++)
         {
@@ -75,19 +76,43 @@ public static class TrainingFramework
             // If the new model is better, save it
             if (newPredictionScore > baselinePredictionScore)
             {
-                noiseVal = (newPredictionScore - baselinePredictionScore) / 10f;
+                // noiseVal = (newPredictionScore - baselinePredictionScore) / 10f;
 
                 // Save the new model
                 model = modelMutation;
                 baselinePredictionScore = newPredictionScore;
             }
-            else
-            {
-                if (noiseVal > 0.00001f)
-                    noiseVal *= 0.95f;
-            }
+            // else
+            // {
+            //     if (noiseVal > 0.00001f)
+            //         noiseVal *= 0.95f;
+            // }
 
             Console.WriteLine($"--- Training Pass {i} // {baselinePredictionScore} // {newPredictionScore} // {noiseVal:F3} --- ");
+
+            // Break if there has been a console keypress
+            if (Console.KeyAvailable)
+                break;
+
+            // Update the last 10 scores
+            last10Scores.Add(newPredictionScore);
+            if (last10Scores.Count > 10)
+                last10Scores.RemoveAt(0);
+
+            // If the average score, plus the min max range, is less than the baselinePredictionScore, increase the noise
+            float avgScore = last10Scores.Average();
+            float minScore = last10Scores.Min();
+            float maxScore = last10Scores.Max();
+            float scoreRange = maxScore - minScore;
+            if (minScore + scoreRange < baselinePredictionScore)
+            {
+                noiseVal *= 1.1f;
+            }
+            else
+            {
+                noiseVal *= 0.9f;
+            }
+            noiseVal = 1f;
         }
         model.DirPath = "./Model_005";
         model.SaveModel();
@@ -103,7 +128,7 @@ public static class TrainingFramework
         // Convert input into tokens
         List<int> tokenIds = model.Vocab!.TokenizeToIds(trainingdata);
         int padTokId = model.Vocab!.GetTokenId("<PAD>");
-        int maxTrainingEntries = 50;
+        int maxTrainingEntries = 500;
 
         // Loop through the input list of tokens, setting up the training data of "windows" of
         // whole sets of tokens
@@ -118,17 +143,51 @@ public static class TrainingFramework
 
             trainingPass.Add(trainingInput);
 
-            if (trainingPass.Count >= maxTrainingEntries)
-                break;
+            // if (trainingPass.Count >= maxTrainingEntries)
+            //     break;
         }
+
+        Random rnd = new Random();
+        List<TrainingInput> randomTrainingSample = trainingPass.OrderBy(x => rnd.Next()).Take(maxTrainingEntries).ToList();
+
+
 
         // List the first ten training inputs
         for (int i = 0; i < 10; i++)
         {
-            Console.WriteLine($"Training Input {i}: {model.Vocab.DebugTokenList(trainingPass[i].InputTokenIdList)} -> {model.Vocab.GetTokenString(trainingPass[i].ExpectedOutputTokenId)}");
+            Console.WriteLine($"Training Input {i}: {model.Vocab.DebugTokenList(randomTrainingSample[i].InputTokenIdList)} -> {model.Vocab.GetTokenString(randomTrainingSample[i].ExpectedOutputTokenId)}");
         }
 
-        return trainingPass;
+        return trainingPass; //randomTrainingSample;
     }
 
+    // --------------------------------------------------------------------------------------------
+
+    public static void NextTokens(TransformerModel model, string promptstr, int numTokens)
+    {
+        // tokenise the text
+        List<int> tokenIds    = model.Vocab!.TokenizeToIds(promptstr);
+        List<int> finalTokens = new List<int>(tokenIds);
+
+        for (int i = 0; i < numTokens; i++)
+        {
+            // Get the last <input length> of tokens
+            List<int> inputTokenIds       = finalTokens.TakeLast(model.ModelDetails.InputLen).ToList();
+
+            // Get the last <input length> of tokens
+            //List<int> inputTokenIds       = finalTokens.GetRange(finalTokens.Count - model.ModelDetails.InputLen, model.ModelDetails.InputLen);
+            List<int> paddedInputTokenIds = new List<int>(inputTokenIds);
+
+            // Add the <PAD> token if the input is too short
+            while (paddedInputTokenIds.Count < model.ModelDetails.InputLen)
+                paddedInputTokenIds.Add(model.Vocab.GetTokenId("<PAD>"));
+
+            int nextTokId = model.PredictNextToken(paddedInputTokenIds);
+            finalTokens.Add(nextTokId);
+        }
+
+        // Loop and output all the tokens
+        Console.WriteLine($"Prompt: {promptstr}");
+        Console.WriteLine($"Tokens: {model.Vocab.DebugTokenList(finalTokens)}");
+    }
 }
