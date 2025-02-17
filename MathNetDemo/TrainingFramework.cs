@@ -47,7 +47,7 @@ public static class TrainingFramework
         }
 
         // Output the baseline loss
-        Console.WriteLine("Baseline score: " + baselinePredictionScore);
+        Console.WriteLine($"\nBaseline score: {baselinePredictionScore}\n");
 
 
         int numPasses = 1;
@@ -67,17 +67,19 @@ public static class TrainingFramework
                 newPredictionScore += modelMutation.PredictionScore(input.InputTokenIdList, input.ExpectedOutputTokenId);
             }
 
-            Console.WriteLine("New loss: " + newPredictionScore);
 
             // If the new model is better, save it
             if (newPredictionScore > baselinePredictionScore)
             {
-                Console.WriteLine($"IMPROVEMENT to {newPredictionScore}");
                 model = modelMutation;
                 baselinePredictionScore = newPredictionScore;
 
-                Console.WriteLine($"Saving new model: Score {newPredictionScore:F5}");
+                Console.WriteLine($"IMPROVEMENT: Saving new model: Score {newPredictionScore}");
                 model.SaveModel();
+            }
+            else
+            {
+                Console.WriteLine("New score: " + newPredictionScore);
             }
         }
     }
