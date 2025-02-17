@@ -14,7 +14,7 @@
 
 // Codespace Commands
 // ==================
-// git commit -am "model progress"
+// git commit -am "training progress"
 // git add <filename>
 // git push
 
@@ -581,9 +581,9 @@ namespace MathNetDemo
             //DemoEmbeddings2();
             //DemoPositionalEncoding();
 
-            DemoMakeModel();
+            //DemoMakeModel();
 
-            //DemoFirstModelRun();
+            DemoFirstModelRun();
             //DemoTinyML();
         }
     }

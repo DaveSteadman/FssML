@@ -204,6 +204,27 @@ public class TokenVocab
         return idList;
     }
 
+    // Output the IDs and strings of the tokens in the input list, largely for debug purposes.
+    // Usage: Console.WriteLine(vocab.DebugTokenList(tokenIds));
+    public string DebugTokenList(List<int> tokenIds)
+    {
+        StringBuilder sb = new StringBuilder();
+        List<string> tokList = new List<string>();
+
+        foreach(int id in tokenIds)
+            tokList.Add(GetTokenString(id));
+
+        if (tokList.Count != tokenIds.Count)
+            throw new Exception("Token list and ID list are not the same length.");
+
+        int len = tokList.Count;
+        for (int i = 0; i < len; i++)
+        {
+            sb.Append($"[{tokList[i]}: {tokenIds[i]}] ");
+        }
+        return sb.ToString();
+    }
+
     // --------------------------------------------------------------------------------------------
     // MARK: Serialization
     // --------------------------------------------------------------------------------------------

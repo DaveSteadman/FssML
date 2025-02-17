@@ -32,10 +32,10 @@ public static class TrainingFramework
     public static void TrainModel(string modeldirname, string trainingdata)
     {
         // Load the model
-        TransformerModel    model     = TransformerModel.LoadModel(modeldirname);
-
+        TransformerModel model = TransformerModel.LoadModel(modeldirname);
         Console.WriteLine($"Model Report: {model.Report()}");
 
+        // Crte the training data
         List<TrainingInput> trainData = ConstructTrainingPass(model, trainingdata);
 
         // Get the training score for this model
@@ -48,23 +48,36 @@ public static class TrainingFramework
         // Output the baseline loss
         Console.WriteLine("Baseline loss: " + baselineAccumulatedLoss);
 
-        // Create a deep copy of the model
-        TransformerModel modelMutation = model.DeepCopy();
-        modelMutation.AddNoise(0.1f);
 
-        // Run the training again, looking for a better (higher) score
-        float newAccumulatedLoss = 0f;
-        foreach (TrainingInput input in trainData)
+        int numPasses = 10;
+
+        for (int i = 0; i < numPasses; i++)
         {
-            newAccumulatedLoss += modelMutation.PredictionLoss(input.InputTokenIdList, input.ExpectedOutputTokenId);
-        }
+            Console.WriteLine($"--- Training Pass {i} // {baselineAccumulatedLoss} --- ");
 
-        Console.WriteLine("New loss: " + newAccumulatedLoss);
+            // Create a deep copy of the model
+            TransformerModel modelMutation = model.DeepCopy();
+            modelMutation.AddNoise(0.1f);
 
-        // If the new model is better, save it
-        if (newAccumulatedLoss > baselineAccumulatedLoss)
-        {
-            modelMutation.SaveModel();
+            // Run the training again, looking for a better (higher) score
+            float newAccumulatedLoss = 0f;
+            foreach (TrainingInput input in trainData)
+            {
+                newAccumulatedLoss += modelMutation.PredictionLoss(input.InputTokenIdList, input.ExpectedOutputTokenId);
+            }
+
+            Console.WriteLine("New loss: " + newAccumulatedLoss);
+
+            // If the new model is better, save it
+            if (newAccumulatedLoss > baselineAccumulatedLoss)
+            {
+                Console.WriteLine($"IMPROVEMENT to {newAccumulatedLoss}");
+                model = modelMutation.DeepCopy();
+                baselineAccumulatedLoss = newAccumulatedLoss;
+
+                Console.WriteLine($"Saving new model: Loss {newAccumulatedLoss:F5}");
+                model.SaveModel();
+            }
         }
     }
 
@@ -77,20 +90,29 @@ public static class TrainingFramework
         // Convert input into tokens
         List<int> tokenIds = model.Vocab!.TokenizeToIds(trainingdata);
         int padTokId = model.Vocab!.GetTokenId("<PAD>");
-        int inputLen = model.PositionalEnc!.InputLength;
+        int maxTrainingEntries = 50;
 
-        foreach (int tokenId in tokenIds)
+        // Loop through the input list of tokens, setting up the training data of "windows" of
+        // whole sets of tokens
+        int windowSize = model.ModelDetails.InputLen;
+
+        for (int i = 0; i < tokenIds.Count - windowSize; i++)
         {
             // Create a training input
             TrainingInput trainingInput = new TrainingInput();
-            trainingInput.InputTokenIdList.Add(tokenId);
-            trainingInput.ExpectedOutputTokenId = tokenId;
-
-            // Pad out the list to the input length
-            while (trainingInput.InputTokenIdList.Count < inputLen)
-                trainingInput.InputTokenIdList.Add(padTokId);
+            trainingInput.InputTokenIdList.AddRange(tokenIds.GetRange(i, windowSize));
+            trainingInput.ExpectedOutputTokenId = tokenIds[i + windowSize];
 
             trainingPass.Add(trainingInput);
+
+            if (trainingPass.Count >= maxTrainingEntries)
+                break;
+        }
+
+        // List the first ten training inputs
+        for (int i = 0; i < 10; i++)
+        {
+            Console.WriteLine($"Training Input {i}: {model.Vocab.DebugTokenList(trainingPass[i].InputTokenIdList)} -> {model.Vocab.GetTokenString(trainingPass[i].ExpectedOutputTokenId)}");
         }
 
         return trainingPass;

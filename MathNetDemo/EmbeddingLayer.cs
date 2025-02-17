@@ -79,12 +79,10 @@ public class EmbeddingLayer
     public MatrixF LookupListToMatrix(List<int> tokenIds)
     {
         // Write out the size params for debugging purposes.
-        Console.WriteLine("VocabSize: " + VocabSize);
-        Console.WriteLine("EmbeddingDim: " + EmbeddingDim);
-        Console.WriteLine("tokenIds.Count: " + tokenIds.Count);
+        // Console.WriteLine("VocabSize: " + VocabSize);
+        // Console.WriteLine("EmbeddingDim: " + EmbeddingDim);
+        // Console.WriteLine("tokenIds.Count: " + tokenIds.Count);
 
-
-        Console.WriteLine("LookupList2");
         MatrixF embeddings = DenseMatrix.Build.Dense(tokenIds.Count, EmbeddingDim);
         for (int i = 0; i < tokenIds.Count; i++)
         {

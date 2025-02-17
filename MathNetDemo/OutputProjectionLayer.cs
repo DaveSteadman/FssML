@@ -189,7 +189,7 @@ public class OutputProjectionLayer
     // For a Loss function:
     // - Score the right selected token, its magnitude is proportional to the probability of the token.
 
-    public float Loss(MatrixF forwardMatrix, int targetTokenID)
+    public float  Loss(MatrixF forwardMatrix, int targetTokenID)
     {
         float retScore = 0f;
 
@@ -204,7 +204,7 @@ public class OutputProjectionLayer
             throw new ArgumentException($"Invalid target token ID: {targetTokenID} in vocab size {OutputDim}");
 
         // Report the max and min values in the vocabRankings vector.
-        Console.WriteLine($"Max: {vocabRankings.Maximum()} Min: {vocabRankings.Minimum()}");
+        //Console.WriteLine($"Max: {vocabRankings.Maximum()} Min: {vocabRankings.Minimum()}");
 
         // Score the correctly selected token.
         var topTokens = TopNTokens(forwardMatrix, 5);
@@ -217,9 +217,10 @@ public class OutputProjectionLayer
             // score the gap to the second token
             retScore += 10f * (topTokens[0].probability - topTokens[1].probability);
         }
-        else // else, score it negatively on its ranking
+        else
         {
-            retScore -= (1 - vocabRankings[targetTokenID]) * 10f;
+            // score the magnitude of the right value in the correct token
+            retScore += 10f * vocabRankings[targetTokenID];
         }
 
         return retScore;
