@@ -25,14 +25,29 @@ public struct TransformerModelFilenames
     public string FeedForwardPath      { get; set; }
     public string OutputProjectionPath { get; set; }
 
+    public string BinModelPath            { get; set; }
+    public string BinVocabPath            { get; set; }
+    public string BinEmbeddingPath        { get; set; }
+    public string BinSelfAttPath          { get; set; }
+    public string BinFeedForwardPath      { get; set; }
+    public string BinOutputProjectionPath { get; set; }
+
     public TransformerModelFilenames(string dirPath)
     {
-        ModelPath            = System.IO.Path.Combine(dirPath, "model.txt");
-        VocabPath            = System.IO.Path.Combine(dirPath, "vocab.txt");
-        EmbeddingPath        = System.IO.Path.Combine(dirPath, "embedding.txt");
-        SelfAttPath          = System.IO.Path.Combine(dirPath, "selfatt.txt");
-        FeedForwardPath      = System.IO.Path.Combine(dirPath, "feedforward.txt");
-        OutputProjectionPath = System.IO.Path.Combine(dirPath, "outputprojection.txt");
+        ModelPath               = System.IO.Path.Combine(dirPath, "model.txt");
+        VocabPath               = System.IO.Path.Combine(dirPath, "vocab.txt");
+        EmbeddingPath           = System.IO.Path.Combine(dirPath, "embedding.txt");
+        SelfAttPath             = System.IO.Path.Combine(dirPath, "selfatt.txt");
+        FeedForwardPath         = System.IO.Path.Combine(dirPath, "feedforward.txt");
+        OutputProjectionPath    = System.IO.Path.Combine(dirPath, "outputprojection.txt");
+
+        BinModelPath            = System.IO.Path.Combine(dirPath, "model.bin");
+        BinVocabPath            = System.IO.Path.Combine(dirPath, "vocab.bin");
+        BinEmbeddingPath        = System.IO.Path.Combine(dirPath, "embedding.bin");
+        BinSelfAttPath          = System.IO.Path.Combine(dirPath, "selfatt.bin");
+        BinFeedForwardPath      = System.IO.Path.Combine(dirPath, "feedforward.bin");
+        BinOutputProjectionPath = System.IO.Path.Combine(dirPath, "outputprojection.bin");
+
     }
 }
 
@@ -458,6 +473,11 @@ public class TransformerModel
         SelfAtt?.SaveToFile(Filenames.SelfAttPath);
         FeedForward?.SaveToFile(Filenames.FeedForwardPath);
         OutputProjection?.SaveToFile(Filenames.OutputProjectionPath);
+
+        Embedding?.SaveToBinary(Filenames.BinEmbeddingPath);
+        SelfAtt?.SaveToBinary(Filenames.BinSelfAttPath);
+        OutputProjection?.SaveToBinary(Filenames.BinOutputProjectionPath);
+
     }
 
     // --------------------------------------------------------------------------------------------
@@ -469,13 +489,19 @@ public class TransformerModel
 
         // Load the model parameters from a JSON file.
         model.Vocab            = TokenVocab.LoadFromFile(model.Filenames.VocabPath);
-        model.Embedding        = EmbeddingLayer.LoadFromFile(model.Filenames.EmbeddingPath);
+
+        //model.Embedding        = EmbeddingLayer.LoadFromFile(model.Filenames.EmbeddingPath);
+        model.Embedding = EmbeddingLayer.LoadFromBinary(model.Filenames.BinEmbeddingPath);
 
         model.Create03_CreatePositionalEncoding(model.ModelDetails.InputLen);
 
-        model.SelfAtt          = SelfAttention.LoadFromFile(model.Filenames.SelfAttPath);
+        //model.SelfAtt          = SelfAttention.LoadFromFile(model.Filenames.SelfAttPath);
+        model.SelfAtt          = SelfAttention.LoadFromBinary(model.Filenames.BinSelfAttPath);
+
         model.FeedForward      = FeedForwardLayer.LoadFromFile(model.Filenames.FeedForwardPath);
-        model.OutputProjection = OutputProjectionLayer.LoadFromFile(model.Filenames.OutputProjectionPath);
+
+        //model.OutputProjection = OutputProjectionLayer.LoadFromFile(model.Filenames.OutputProjectionPath);
+        model.OutputProjection = OutputProjectionLayer.LoadFromBinary(model.Filenames.BinOutputProjectionPath);
 
         return model;
     }

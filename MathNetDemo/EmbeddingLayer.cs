@@ -26,6 +26,7 @@ public class EmbeddingLayer
 
         // Create and initialize the embedding matrix with random float values.
         EmbeddingMatrix = DenseMatrix.Build.Random(vocabSize, embeddingDim, new ContinuousUniform(-0.1f, 0.1f));
+        EmbeddingMatrix = EmbeddingMatrix.TanhNormalize();
     }
 
     // --------------------------------------------------------------------------------------------
@@ -102,6 +103,7 @@ public class EmbeddingLayer
     public void SetRandom(float min, float max)
     {
         EmbeddingMatrix = DenseMatrix.Build.Random(VocabSize, EmbeddingDim, new ContinuousUniform(min, max));
+        EmbeddingMatrix = EmbeddingMatrix.TanhNormalize();
     }
 
     // --------------------------------------------------------------------------------------------
@@ -117,6 +119,7 @@ public class EmbeddingLayer
                 EmbeddingMatrix[i, j] += offset;
             }
         }
+        EmbeddingMatrix = EmbeddingMatrix.TanhNormalize();
     }
 
     // --------------------------------------------------------------------------------------------
@@ -135,7 +138,7 @@ public class EmbeddingLayer
         //     }
         // }
 
-        EmbeddingMatrix.TanhNormalize();
+        EmbeddingMatrix = EmbeddingMatrix.TanhNormalize();
     }
 
     // --------------------------------------------------------------------------------------------
@@ -202,5 +205,49 @@ public class EmbeddingLayer
             return embeddingLayer;
         }
     }
+
+    // --------------------------------------------------------------------------------------------
+    // MARK: Binary Load Save
+    // --------------------------------------------------------------------------------------------
+
+    public void SaveToBinary(string path)
+    {
+        using (var writer = new BinaryWriter(File.Open(path, FileMode.Create)))
+        {
+            writer.Write(VocabSize);
+            writer.Write(EmbeddingDim);
+            for (int i = 0; i < VocabSize; i++)
+            {
+                for (int j = 0; j < EmbeddingDim; j++)
+                {
+                    writer.Write(EmbeddingMatrix[i, j]);
+                }
+            }
+        }
+    }
+
+    // --------------------------------------------------------------------------------------------
+
+    public static EmbeddingLayer LoadFromBinary(string path)
+    {
+        using (var reader = new BinaryReader(File.Open(path, FileMode.Open)))
+        {
+            int vocabSize    = reader.ReadInt32();
+            int embeddingDim = reader.ReadInt32();
+
+            EmbeddingLayer embeddingLayer = new EmbeddingLayer(vocabSize, embeddingDim);
+
+            for (int i = 0; i < vocabSize; i++)
+            {
+                for (int j = 0; j < embeddingDim; j++)
+                {
+                    embeddingLayer.EmbeddingMatrix[i, j] = reader.ReadSingle();
+                }
+            }
+
+            return embeddingLayer;
+        }
+    }
+
 }
 

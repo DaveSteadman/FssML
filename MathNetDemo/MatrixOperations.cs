@@ -126,7 +126,7 @@ public static class MatrixOperations
         {
             for (int j = 0; j < cols; j++)
             {
-                sb.Append(matrix[i, j].ToString(CultureInfo.InvariantCulture));
+                sb.Append(matrix[i, j].ToString("R", CultureInfo.InvariantCulture));
                 // Append a comma between elements (but not after the last element)
                 if (!(i == rows - 1 && j == cols - 1))
                     sb.Append(',');
@@ -191,7 +191,7 @@ public static class MatrixOperations
 
         for (int i = 0; i < count; i++)
         {
-            sb.Append(vector[i].ToString(CultureInfo.InvariantCulture));
+            sb.Append(vector[i].ToString("R", CultureInfo.InvariantCulture));
             // Append a comma between elements (but not after the last element)
             if (i < count - 1)
                 sb.Append(',');

@@ -32,6 +32,9 @@ public static class TrainingFramework
     // TrainingFramework.TrainModel
     public static void TrainModel(string modeldirname, string trainingdata)
     {
+        // Start the timer
+        RunTimer timer = new RunTimer();
+
         // Load the model
         TransformerModel model = TransformerModel.LoadModel(modeldirname);
         Console.WriteLine($"Model Report: {model.Report()}");
@@ -50,14 +53,15 @@ public static class TrainingFramework
         Console.WriteLine($"\nBaseline score: {baselinePredictionScore}\n");
 
 
-        int numPasses = 1000;
+        int numPasses = 500;
+        float noiseVal = 1f;
+
 
         for (int i = 0; i < numPasses; i++)
         {
-
             // Create a deep copy of the model
             TransformerModel modelMutation = model.DeepCopy();
-            modelMutation.AddNoise(0.4f, i);
+            modelMutation.AddNoise(noiseVal, i);
 
             //Console.WriteLine($"Checksums: Original {model.CheckSum()} // Mutation {modelMutation.CheckSum()}");
 
@@ -71,17 +75,25 @@ public static class TrainingFramework
             // If the new model is better, save it
             if (newPredictionScore > baselinePredictionScore)
             {
+                noiseVal = (newPredictionScore - baselinePredictionScore) / 10f;
+
                 // Save the new model
                 model = modelMutation;
                 baselinePredictionScore = newPredictionScore;
             }
+            else
+            {
+                if (noiseVal > 0.00001f)
+                    noiseVal *= 0.95f;
+            }
 
-            Console.WriteLine($"--- Training Pass {i} // {baselinePredictionScore} // {newPredictionScore} --- ");
-
-
+            Console.WriteLine($"--- Training Pass {i} // {baselinePredictionScore} // {newPredictionScore} // {noiseVal:F3} --- ");
         }
         model.DirPath = "./Model_005";
         model.SaveModel();
+
+        // Output the elapsed time
+        Console.WriteLine($"Elapsed time: {timer.ElapsedSeconds:F3} seconds");
     }
 
     private static List<TrainingInput> ConstructTrainingPass(TransformerModel model, string trainingdata)

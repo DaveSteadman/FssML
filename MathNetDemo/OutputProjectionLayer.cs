@@ -198,7 +198,7 @@ public class OutputProjectionLayer
         VectorF vocabRankings = Softmax(aggregated);
 
         // Normalise the aggregated vector to a 0 to 1 range.
-        aggregated = aggregated.Normalize(1);
+        //aggregated = aggregated.Normalize(1);
 
         float min = aggregated.Minimum();
         float max = aggregated.Maximum();
@@ -210,7 +210,7 @@ public class OutputProjectionLayer
         // Create a list of rankings of the normalizedaggregated list max to min
         VectorF ranked = normalizedaggregated.Rank();
         //Console.WriteLine($"Debug: ranked: {ranked}");
-        Console.WriteLine($"Debug Token Rank: {ranked[targetTokenID]}");
+        //Console.WriteLine($"Debug Token Rank: {ranked[targetTokenID]}");
 
 
         // check the sizes
@@ -226,18 +226,15 @@ public class OutputProjectionLayer
         var topTokens = TopNTokens(forwardMatrix, 5);
         if (topTokens.Length != 5)
             throw new ArgumentException("TopNTokens did not return 5 tokens");
-        if (topTokens[0].tokenId == targetTokenID)
-        {
-            retScore += 50f * topTokens[0].probability;
 
-            // score the gap to the second token
-            retScore += 10f * (topTokens[0].probability - topTokens[1].probability);
-        }
-        else
+
+
+
+        retScore += 1000 - ranked[targetTokenID];
+
+        if (ranked[targetTokenID] == 0)
         {
-            // score the magnitude of the right value in the correct token
-            retScore += 10f * vocabRankings[targetTokenID];
-            retScore = vocabRankings[targetTokenID];
+            retScore += 50f;
         }
 
         // Add the right score and subtract the sum of all other probabilities.
@@ -339,6 +336,71 @@ public class OutputProjectionLayer
             OutputProjectionLayer layer = new OutputProjectionLayer(inputDim, outputDim);
             layer.Weights = newW!;
             layer.Biases  = newB!;
+            return layer;
+        }
+    }
+
+    // --------------------------------------------------------------------------------------------
+    // MARK: Binary Load Save
+    // --------------------------------------------------------------------------------------------
+
+    public void SaveToBinary(string filename)
+    {
+        using (var writer = new BinaryWriter(File.Open(filename, FileMode.Create)))
+        {
+            writer.Write(InputDim);
+            writer.Write(OutputDim);
+
+            int yAxis = Weights.RowCount;
+            int xAxis = Weights.ColumnCount;
+
+            writer.Write(Weights.RowCount);
+            writer.Write(Weights.ColumnCount);
+            for (int i = 0; i < yAxis; i++)
+            {
+                for (int j = 0; j < xAxis; j++)
+                {
+                    writer.Write(Weights[i, j]);
+                }
+            }
+
+            writer.Write(Biases.Count);
+            for (int i = 0; i < Biases.Count; i++)
+            {
+                writer.Write(Biases[i]);
+            }
+        }
+    }
+
+    public static OutputProjectionLayer LoadFromBinary(string filename)
+    {
+        using (var reader = new BinaryReader(File.Open(filename, FileMode.Open)))
+        {
+            int inputDim  = reader.ReadInt32();
+            int outputDim = reader.ReadInt32();
+
+            int yAxis = reader.ReadInt32();
+            int xAxis = reader.ReadInt32();
+
+            MatrixF newW = DenseMatrix.Build.Dense(yAxis, xAxis);
+            for (int i = 0; i < yAxis; i++)
+            {
+                for (int j = 0; j < xAxis; j++)
+                {
+                    newW[i, j] = reader.ReadSingle();
+                }
+            }
+
+            int biasCount = reader.ReadInt32();
+            VectorF newB = DenseVector.Build.Dense(biasCount);
+            for (int i = 0; i < biasCount; i++)
+            {
+                newB[i] = reader.ReadSingle();
+            }
+
+            OutputProjectionLayer layer = new OutputProjectionLayer(inputDim, outputDim);
+            layer.Weights = newW;
+            layer.Biases  = newB;
             return layer;
         }
     }

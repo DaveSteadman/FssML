@@ -268,4 +268,100 @@ public class SelfAttention
             return layer;
         }
     }
+
+    // --------------------------------------------------------------------------------------------
+    // MARK: Binary Load Save
+    // --------------------------------------------------------------------------------------------
+
+    // Save the self-attention layer to a binary file.
+    public void SaveToBinary(string path)
+    {
+        using (var writer = new BinaryWriter(File.Open(path, FileMode.Create)))
+        {
+            writer.Write(InputLen);
+            writer.Write(ModelDim);
+
+            for (int i = 0; i < ModelDim; i++)
+            {
+                for (int j = 0; j < ModelDim; j++)
+                {
+                    writer.Write(W_q[i, j]);
+                }
+            }
+
+            for (int i = 0; i < ModelDim; i++)
+            {
+                for (int j = 0; j < ModelDim; j++)
+                {
+                    writer.Write(W_k[i, j]);
+                }
+            }
+
+            for (int i = 0; i < ModelDim; i++)
+            {
+                for (int j = 0; j < ModelDim; j++)
+                {
+                    writer.Write(W_v[i, j]);
+                }
+            }
+
+            for (int i = 0; i < ModelDim; i++)
+            {
+                for (int j = 0; j < ModelDim; j++)
+                {
+                    writer.Write(W_o[i, j]);
+                }
+            }
+        }
+    }
+
+    // --------------------------------------------------------------------------------------------
+
+    // Load a self-attention layer from a binary file.
+
+    public static SelfAttention LoadFromBinary(string path)
+    {
+        using (var reader = new BinaryReader(File.Open(path, FileMode.Open)))
+        {
+            int inputLen = reader.ReadInt32();
+            int modelDim = reader.ReadInt32();
+
+            SelfAttention layer = new SelfAttention(inputLen, modelDim);
+
+            for (int i = 0; i < modelDim; i++)
+            {
+                for (int j = 0; j < modelDim; j++)
+                {
+                    layer.W_q[i, j] = reader.ReadSingle();
+                }
+            }
+
+            for (int i = 0; i < modelDim; i++)
+            {
+                for (int j = 0; j < modelDim; j++)
+                {
+                    layer.W_k[i, j] = reader.ReadSingle();
+                }
+            }
+
+            for (int i = 0; i < modelDim; i++)
+            {
+                for (int j = 0; j < modelDim; j++)
+                {
+                    layer.W_v[i, j] = reader.ReadSingle();
+                }
+            }
+
+            for (int i = 0; i < modelDim; i++)
+            {
+                for (int j = 0; j < modelDim; j++)
+                {
+                    layer.W_o[i, j] = reader.ReadSingle();
+                }
+            }
+
+            return layer;
+        }
+    }
+
 }
