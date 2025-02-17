@@ -21,7 +21,7 @@ public static class TrainingFramework
         var model = new TransformerModel(dirname);
 
         model.Create01_CreateVocab("./SampleStr.txt", 1000);
-        model.Create02_CreateEmbedding(16);
+        model.Create02_CreateEmbedding(32);
         model.Create03_CreatePositionalEncoding(10);
         model.Create04_CreateSelfAttention();
         model.Create05_CreateFeedForward();
@@ -50,7 +50,7 @@ public static class TrainingFramework
         Console.WriteLine($"\nBaseline score: {baselinePredictionScore}\n");
 
 
-        int numPasses = 1;
+        int numPasses = 1000;
 
         for (int i = 0; i < numPasses; i++)
         {
@@ -58,9 +58,9 @@ public static class TrainingFramework
 
             // Create a deep copy of the model
             TransformerModel modelMutation = model.DeepCopy();
-            modelMutation.AddNoise(0.1f);
+            modelMutation.AddNoise(0.1f, i);
 
-            Console.WriteLine($"Checksums: Original {model.CheckSum()} // Mutation {modelMutation.CheckSum()}");
+            //Console.WriteLine($"Checksums: Original {model.CheckSum()} // Mutation {modelMutation.CheckSum()}");
 
             // Run the training again, looking for a better (higher) score
             float newPredictionScore = 0f;
@@ -69,22 +69,15 @@ public static class TrainingFramework
                 newPredictionScore += modelMutation.PredictionScore(input.InputTokenIdList, input.ExpectedOutputTokenId);
             }
 
-
             // If the new model is better, save it
             if (newPredictionScore > baselinePredictionScore)
             {
-                //model = modelMutation;
-                //baselinePredictionScore = newPredictionScore;
-
-                modelMutation.DirPath = "./Model_003";
-
-                Console.WriteLine($"IMPROVEMENT: Saving new model: Score {newPredictionScore}");
-                modelMutation.SaveModel();
+                // Save the new model
+                model = modelMutation;
+                baselinePredictionScore = newPredictionScore;
             }
-            else
-            {
-                Console.WriteLine("New score: " + newPredictionScore);
-            }
+
+            model.SaveModel();
         }
     }
 

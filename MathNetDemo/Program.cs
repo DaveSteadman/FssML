@@ -556,7 +556,7 @@ namespace MathNetDemo
             string modeldirname = "./Model_002";
             string input = File.ReadAllText("SampleStr.txt");
 
-            //TrainingFramework.CreateInitialModel(modeldirname);
+            TrainingFramework.CreateInitialModel(modeldirname);
 
 
             TrainingFramework.TrainModel(modeldirname, input);

@@ -189,7 +189,7 @@ public class OutputProjectionLayer
     // For a Loss function:
     // - Score the right selected token, its magnitude is proportional to the probability of the token.
 
-    public float  Loss(MatrixF forwardMatrix, int targetTokenID)
+    public float Loss(MatrixF forwardMatrix, int targetTokenID)
     {
         float retScore = 0f;
 
@@ -222,6 +222,10 @@ public class OutputProjectionLayer
             // score the magnitude of the right value in the correct token
             retScore += 10f * vocabRankings[targetTokenID];
         }
+
+
+        retScore = vocabRankings[targetTokenID];
+
 
         return retScore;
     }

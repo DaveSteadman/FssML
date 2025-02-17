@@ -236,12 +236,19 @@ public class TransformerModel
     // --------------------------------------------------------------------------------------------
 
     // Add random +/- noise to all model parameters.
-    public void AddNoise(float absNoiseVal)
+    public void AddNoise(float absNoiseVal, int passcycle = 0)
     {
-        Embedding?.AddNoise(absNoiseVal);
-        SelfAtt?.AddNoise(absNoiseVal);
-        FeedForward?.AddNoise(absNoiseVal);
-        OutputProjection?.AddNoise(absNoiseVal);
+        if (passcycle % 4 == 0)
+            Embedding?.AddNoise(absNoiseVal);
+
+        if (passcycle % 4 == 1)
+            SelfAtt?.AddNoise(absNoiseVal);
+
+        if (passcycle % 4 == 2)
+            FeedForward?.AddNoise(absNoiseVal);
+
+        if (passcycle % 4 == 3)
+            OutputProjection?.AddNoise(absNoiseVal);
     }
 
     // --------------------------------------------------------------------------------------------
@@ -269,7 +276,7 @@ public class TransformerModel
             Console.Write($"[{tokenStrList[i]}: {tokenIdList[i]}] ");
         Console.Write("\n");
 
-        AddNoise(0.1f);
+        //AddNoise(0.1f);
 
 
         // Get the embeddings for the input tokens.
