@@ -58,7 +58,7 @@ public class PositionalEncoder
 
     public string Report()
     {
-        return $"PositionalEncoder // Sequence Length: {sequenceLength} // Embedding Dimension: {embeddingDim} // Encoding Shape(RowxCol): [{positionalEncoding.RowCount} x {positionalEncoding.ColumnCount}]";
+        return $"PositionalEncoder // Sequence Length: {sequenceLength} // Embedding Dimension: {embeddingDim} // Encoding Shape(RowxCol): [{positionalEncoding.RowCount} x {positionalEncoding.ColumnCount} // Checksum: {CheckSum()}";
     }
 
     // --------------------------------------------------------------------------------------------
@@ -70,6 +70,11 @@ public class PositionalEncoder
         PositionalEncoder newEncoder = new PositionalEncoder(sequenceLength, embeddingDim);
         newEncoder.positionalEncoding = positionalEncoding.Clone();
         return newEncoder;
+    }
+
+    public float CheckSum()
+    {
+        return positionalEncoding.RowSums().Sum();
     }
 
     // --------------------------------------------------------------------------------------------

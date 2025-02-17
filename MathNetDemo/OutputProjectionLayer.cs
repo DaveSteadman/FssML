@@ -265,7 +265,12 @@ public class OutputProjectionLayer
 
     public string Report()
     {
-        return $"OutputProjectionLayer // InputDim: {InputDim} // OutputDim: {OutputDim} // Weights Shape(RowxCol): [{Weights.RowCount} x {Weights.ColumnCount}] // Biases Length: {Biases.Count}";
+        return $"OutputProjectionLayer // InputDim: {InputDim} // OutputDim: {OutputDim} // Weights Shape(RowxCol): [{Weights.RowCount} x {Weights.ColumnCount}] // Biases Length: {Biases.Count} // CheckSum: {CheckSum()}";
+    }
+
+    public float CheckSum()
+    {
+        return Weights.RowSums().Sum() + Biases.Sum();
     }
 
     // --------------------------------------------------------------------------------------------

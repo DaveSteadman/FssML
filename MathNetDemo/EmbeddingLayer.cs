@@ -144,7 +144,12 @@ public class EmbeddingLayer
 
     public string Report()
     {
-        return $"VocabSize={VocabSize}, EmbeddingDim={EmbeddingDim}, MatrixShape(RowxCol)={EmbeddingMatrix.RowCount}x{EmbeddingMatrix.ColumnCount}";
+        return $"VocabSize={VocabSize}, EmbeddingDim={EmbeddingDim}, MatrixShape(RowxCol)={EmbeddingMatrix.RowCount}x{EmbeddingMatrix.ColumnCount} CheckSum={CheckSum()}";
+    }
+
+    public float CheckSum()
+    {
+        return EmbeddingMatrix.RowSums().Sum();
     }
 
     // --------------------------------------------------------------------------------------------

@@ -29,6 +29,7 @@ public static class TrainingFramework
         model.SaveModel();
     }
 
+    // TrainingFramework.TrainModel
     public static void TrainModel(string modeldirname, string trainingdata)
     {
         // Load the model
@@ -39,43 +40,43 @@ public static class TrainingFramework
         List<TrainingInput> trainData = ConstructTrainingPass(model, trainingdata);
 
         // Get the training score for this model
-        float baselineAccumulatedLoss = 0f;
+        float baselinePredictionScore = 0f;
         foreach (TrainingInput input in trainData)
         {
-            baselineAccumulatedLoss += model.PredictionLoss(input.InputTokenIdList, input.ExpectedOutputTokenId);
+            baselinePredictionScore += model.PredictionScore(input.InputTokenIdList, input.ExpectedOutputTokenId);
         }
 
         // Output the baseline loss
-        Console.WriteLine("Baseline loss: " + baselineAccumulatedLoss);
+        Console.WriteLine("Baseline score: " + baselinePredictionScore);
 
 
-        int numPasses = 10;
+        int numPasses = 1;
 
         for (int i = 0; i < numPasses; i++)
         {
-            Console.WriteLine($"--- Training Pass {i} // {baselineAccumulatedLoss} --- ");
+            Console.WriteLine($"--- Training Pass {i} // {baselinePredictionScore} --- ");
 
             // Create a deep copy of the model
             TransformerModel modelMutation = model.DeepCopy();
             modelMutation.AddNoise(0.1f);
 
             // Run the training again, looking for a better (higher) score
-            float newAccumulatedLoss = 0f;
+            float newPredictionScore = 0f;
             foreach (TrainingInput input in trainData)
             {
-                newAccumulatedLoss += modelMutation.PredictionLoss(input.InputTokenIdList, input.ExpectedOutputTokenId);
+                newPredictionScore += modelMutation.PredictionScore(input.InputTokenIdList, input.ExpectedOutputTokenId);
             }
 
-            Console.WriteLine("New loss: " + newAccumulatedLoss);
+            Console.WriteLine("New loss: " + newPredictionScore);
 
             // If the new model is better, save it
-            if (newAccumulatedLoss > baselineAccumulatedLoss)
+            if (newPredictionScore > baselinePredictionScore)
             {
-                Console.WriteLine($"IMPROVEMENT to {newAccumulatedLoss}");
-                model = modelMutation.DeepCopy();
-                baselineAccumulatedLoss = newAccumulatedLoss;
+                Console.WriteLine($"IMPROVEMENT to {newPredictionScore}");
+                model = modelMutation;
+                baselinePredictionScore = newPredictionScore;
 
-                Console.WriteLine($"Saving new model: Loss {newAccumulatedLoss:F5}");
+                Console.WriteLine($"Saving new model: Score {newPredictionScore:F5}");
                 model.SaveModel();
             }
         }

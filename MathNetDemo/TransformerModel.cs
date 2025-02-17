@@ -320,7 +320,7 @@ public class TransformerModel
         return nextTokenStr;
     }
 
-    public float PredictionLoss(List<int> tokenIdList, int expectedNextTokenId)
+    public float PredictionScore(List<int> tokenIdList, int expectedNextTokenId)
     {
         // // Tokenize the input text.
         // List<string> tokenStrList = Vocab!.TokenizeToStrings(inputText);

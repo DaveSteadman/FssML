@@ -189,7 +189,12 @@ public class SelfAttention
 
     public string Report()
     {
-        return $"SelfAttention // Input Length: {InputLen} // Model Dimension: {ModelDim} // Parameter Count: {ParamCount()} // Weight Shapes (RowxCol): [Q: {W_q.RowCount}x{W_q.ColumnCount}, K: {W_k.RowCount}x{W_k.ColumnCount}, V: {W_v.RowCount}x{W_v.ColumnCount}, O: {W_o.RowCount}x{W_o.ColumnCount}]";
+        return $"SelfAttention // Input Length: {InputLen} // Model Dimension: {ModelDim} // Parameter Count: {ParamCount()} // Weight Shapes (RowxCol): [Q: {W_q.RowCount}x{W_q.ColumnCount}, K: {W_k.RowCount}x{W_k.ColumnCount}, V: {W_v.RowCount}x{W_v.ColumnCount}, O: {W_o.RowCount}x{W_o.ColumnCount}] // Checksum: {CheckSum()}";
+    }
+
+    public float CheckSum()
+    {
+        return W_q.RowSums().Sum() + W_k.RowSums().Sum() + W_v.RowSums().Sum() + W_o.RowSums().Sum();
     }
 
     // --------------------------------------------------------------------------------------------
