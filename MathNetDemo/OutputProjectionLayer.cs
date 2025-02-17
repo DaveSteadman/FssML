@@ -205,8 +205,12 @@ public class OutputProjectionLayer
         VectorF normalizedaggregated = aggregated.Map(x => (x - min) / (max - min));
 
         //Console.WriteLine($"Debug: Agregated Range: {normalizedaggregated.Minimum()} - {normalizedaggregated.Maximum()}");
-       // Console.WriteLine($"Debug: aggregated: {normalizedaggregated}");
+        //Console.WriteLine($"Debug: aggregated: {normalizedaggregated}");
 
+        // Create a list of rankings of the normalizedaggregated list max to min
+        VectorF ranked = normalizedaggregated.Rank();
+        //Console.WriteLine($"Debug: ranked: {ranked}");
+        Console.WriteLine($"Debug Token Rank: {ranked[targetTokenID]}");
 
 
         // check the sizes
@@ -236,11 +240,9 @@ public class OutputProjectionLayer
             retScore = vocabRankings[targetTokenID];
         }
 
+        // Add the right score and subtract the sum of all other probabilities.
         retScore += 1000f * normalizedaggregated[targetTokenID];
-
-        // Subtract the sum of all other probabilities.
         retScore -= normalizedaggregated.Sum();
-
 
         return retScore;
     }

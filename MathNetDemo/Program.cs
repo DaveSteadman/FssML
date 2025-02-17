@@ -29,6 +29,11 @@ using MathNet.Numerics.LinearAlgebra.Single;
 using MatrixF = MathNet.Numerics.LinearAlgebra.Matrix<float>;  // Alias for Matrix<float>
 using VectorF = MathNet.Numerics.LinearAlgebra.Vector<float>;  // Alias for Vector<float>
 
+
+// Issues:
+// - Serialisation / Model recreation
+// - Training: Better scoring
+
 namespace MathNetDemo
 {
     class Program
