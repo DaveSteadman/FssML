@@ -60,6 +60,8 @@ public static class TrainingFramework
             TransformerModel modelMutation = model.DeepCopy();
             modelMutation.AddNoise(0.1f);
 
+            Console.WriteLine($"Checksums: Original {model.CheckSum()} // Mutation {modelMutation.CheckSum()}");
+
             // Run the training again, looking for a better (higher) score
             float newPredictionScore = 0f;
             foreach (TrainingInput input in trainData)
@@ -71,11 +73,13 @@ public static class TrainingFramework
             // If the new model is better, save it
             if (newPredictionScore > baselinePredictionScore)
             {
-                model = modelMutation;
-                baselinePredictionScore = newPredictionScore;
+                //model = modelMutation;
+                //baselinePredictionScore = newPredictionScore;
+
+                modelMutation.DirPath = "./Model_003";
 
                 Console.WriteLine($"IMPROVEMENT: Saving new model: Score {newPredictionScore}");
-                model.SaveModel();
+                modelMutation.SaveModel();
             }
             else
             {
@@ -83,8 +87,6 @@ public static class TrainingFramework
             }
         }
     }
-
-
 
     private static List<TrainingInput> ConstructTrainingPass(TransformerModel model, string trainingdata)
     {

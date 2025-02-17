@@ -152,6 +152,13 @@ public class EmbeddingLayer
         return EmbeddingMatrix.RowSums().Sum();
     }
 
+    public static bool Compare(EmbeddingLayer a, EmbeddingLayer b)
+    {
+        bool sizeComp = a.VocabSize == b.VocabSize && a.EmbeddingDim == b.EmbeddingDim;
+        bool matrixComp = a.EmbeddingMatrix.Equals(b.EmbeddingMatrix);
+        return sizeComp && matrixComp;
+    }
+
     // --------------------------------------------------------------------------------------------
     // MARK: Load Save
     // --------------------------------------------------------------------------------------------

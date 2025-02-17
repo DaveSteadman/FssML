@@ -415,6 +415,20 @@ public class TransformerModel
         return sb.ToString();
     }
 
+    public float CheckSum()
+    {
+        float sum = 0.0f;
+
+        //sum += Vocab!.CheckSum();
+        sum += Embedding!.CheckSum();
+        sum += PositionalEnc!.CheckSum();
+        sum += SelfAtt!.CheckSum();
+        //sum += FeedForward!.CheckSum();
+        sum += OutputProjection!.CheckSum();
+
+        return sum;
+    }
+
     // --------------------------------------------------------------------------------------------
     // MARK: Serialization
     // --------------------------------------------------------------------------------------------
@@ -435,6 +449,8 @@ public class TransformerModel
         // string modelPath = Path.Combine(DirPath, "model.json");
         // string modelJson = JsonSerializer.Serialize(this);
         // File.WriteAllText(modelPath, modelJson);
+
+        Filenames = new(DirPath);
 
         ModelDetails.SaveToFile(Filenames.ModelPath);
         Vocab?.SaveToFile(Filenames.VocabPath);
