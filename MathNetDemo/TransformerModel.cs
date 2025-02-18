@@ -438,6 +438,8 @@ public class TransformerModel
 
         sb.AppendLine("Model Report");
         sb.AppendLine("------------");
+        sb.AppendLine($"Model Path: {DirPath}");
+        sb.AppendLine($"Model Parameters: {ParamCount()}");
         sb.AppendLine($"Objects Present: [Vocab: {Vocab != null}] [Embedding: {Embedding != null}] [Positional Encoding: {PositionalEnc != null}] [Self-Attention: {SelfAtt != null}] [Feed-Forward: {FeedForward != null}] [Output Projection: {OutputProjection != null}]");
         sb.AppendLine($"Vocab Size: {Vocab!.Count}");
         sb.AppendLine($"Embedding: {Embedding!.Report()}");
@@ -460,6 +462,19 @@ public class TransformerModel
         sum += OutputProjection!.CheckSum();
 
         return sum;
+    }
+
+    public int ParamCount()
+    {
+        int count = 0;
+
+        count += Embedding!.ParamCount();
+        //count += PositionalEnc!.ParamCount();
+        count += SelfAtt!.ParamCount();
+        //count += FeedForward!.ParamCount();
+        count += OutputProjection!.ParamCount();
+
+        return count;
     }
 
     // --------------------------------------------------------------------------------------------

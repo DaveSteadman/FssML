@@ -186,6 +186,18 @@ public class OutputProjectionLayer
     // MARK: Training
     // --------------------------------------------------------------------------------------------
 
+    public VectorF RawOutputs(MatrixF forwardMatrix)
+    {
+        MatrixF logits = Forward(forwardMatrix);
+        VectorF aggregated = logits.ColumnSums().Divide(logits.RowCount);
+
+        // float min = aggregated.Minimum();
+        // float max = aggregated.Maximum();
+        // VectorF normalizedaggregated = aggregated.Map(x => (x - min) / (max - min));
+
+        return aggregated;
+    }
+
     // For a Loss function:
     // - Score the right selected token, its magnitude is proportional to the probability of the token.
 
@@ -339,6 +351,63 @@ public class OutputProjectionLayer
             return layer;
         }
     }
+
+    // --------------------------------------------------------------------------------------------
+    // MARK: Backprop
+    // --------------------------------------------------------------------------------------------
+
+    public VectorF HotOne(int tokId)
+    {
+        VectorF hotOne = DenseVector.Create(OutputDim, 0f);
+        hotOne[tokId] = 1f;
+        return hotOne;
+    }
+
+    // Take the outputs, and the expected hot-one vector, and compute the nudges we would want to apply
+
+    public VectorF ComputeOutputNudge(VectorF logits, VectorF expectedOneHot)
+    {
+        // Compute softmax probabilities from logits.
+        float max = logits.Maximum();
+        VectorF exp = logits.Map(v => MathF.Exp(v - max));
+        float sum = exp.Sum();
+        VectorF probabilities = exp.Divide(sum);
+
+        // The nudge is the gradient: (probabilities - expectedOneHot)
+        return probabilities - expectedOneHot;
+    }
+
+    // Apply the nudges from ComputeOutputNudge, and return the matrix of nudges we would want to pass upstream to the previous layer
+    public MatrixF UpdateParameters(MatrixF input, VectorF outputNudge, float learningRate)
+    {
+        // Number of samples in the input.
+        int n = input.RowCount;
+
+        // Distribute the nudge equally to every sample.
+        // Here we assume that the loss was computed on the aggregated (averaged) logits.
+        MatrixF upstreamGradient = DenseMatrix.Build.Dense(n, OutputDim, (i, j) => outputNudge[j] / n);
+
+        // Compute gradients:
+        // dL/dWeights = inputᵀ * upstreamGradient
+        MatrixF gradWeights = input.Transpose() * upstreamGradient;
+
+        // dL/dBiases = sum of upstreamGradient over all samples.
+        VectorF gradBiases = DenseVector.Build.Dense(OutputDim);
+        for (int i = 0; i < n; i++)
+        {
+            gradBiases += upstreamGradient.Row(i);
+        }
+
+        // Update the weights and biases.
+        Weights = Weights - gradWeights.Multiply(learningRate);
+        Biases  = Biases  - gradBiases.Multiply(learningRate);
+
+        // Backpropagate the gradient to the input: dL/dInput = upstreamGradient * Weightsᵀ.
+        MatrixF gradInput = upstreamGradient * Weights.Transpose();
+
+        return gradInput;
+    }
+
 
     // --------------------------------------------------------------------------------------------
     // MARK: Binary Load Save
