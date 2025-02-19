@@ -164,6 +164,9 @@ public static class TrainingFramework
         Console.WriteLine($"OutputLayerNudges: Size {outputLayerNudges.Count}");
         Console.WriteLine($"OutputLayerNudges: {outputLayerNudges}");
 
+
+        MatrixF selfAttNudges = model.OutputProjection!.UpdateParameters(MatrixF input, VectorF outputNudge, float learningRate)
+
         // // Get the training score for this model
         // float baselinePredictionScore = 0f;
         // foreach (TrainingInput input in trainData)

@@ -368,9 +368,9 @@ public class OutputProjectionLayer
     public VectorF ComputeOutputNudge(VectorF logits, VectorF expectedOneHot)
     {
         // Compute softmax probabilities from logits.
-        float max = logits.Maximum();
+        float   max = logits.Maximum();
         VectorF exp = logits.Map(v => MathF.Exp(v - max));
-        float sum = exp.Sum();
+        float   sum = exp.Sum();
         VectorF probabilities = exp.Divide(sum);
 
         // The nudge is the gradient: (probabilities - expectedOneHot)
