@@ -563,11 +563,12 @@ namespace MathNetDemo
 
             //TrainingFramework.CreateInitialModel(modeldirname);
 
-            TrainingFramework.TrainModel(modeldirname, input);
+            // TrainingFramework.TrainModel(modeldirname, input);
 
+            // TransformerModel model2  = TransformerModel.LoadModel("./Model_005");
+            // TrainingFramework.NextTokens(model2, "The rain in spain", 10);
 
-            TransformerModel model2  = TransformerModel.LoadModel("./Model_005");
-            TrainingFramework.NextTokens(model2, "The rain in spain", 10);
+            TrainingFramework.TrainModel_Backprop(modeldirname, input);
         }
 
         // --------------------------------------------------------------------------------------------

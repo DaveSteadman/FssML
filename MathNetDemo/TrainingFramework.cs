@@ -1,6 +1,9 @@
 using System;
 using System.Collections.Generic;
 
+using MatrixF = MathNet.Numerics.LinearAlgebra.Matrix<float>;  // Alias for Matrix<float>
+using VectorF = MathNet.Numerics.LinearAlgebra.Vector<float>;  // Alias for Vector<float>
+
 
 // TrainingFramework:
 // - Creates/Loads a model, performs training passes and serializes the model back to disk
@@ -149,11 +152,17 @@ public static class TrainingFramework
         var encodedEmbeddings = model.PositionalEnc!.ApplyPositionalEncoding(embeddings);
         var selfAttOutput     = model.SelfAtt!.Forward(encodedEmbeddings);
 
-        var logits = model.OutputProjection!.RawOutputs(selfAttOutput);
-        var hotOne = model.OutputProjection!.HotOne(trainData[0].ExpectedOutputTokenId);
+        VectorF logits = model.OutputProjection!.RawOutputs(selfAttOutput);
+        Console.WriteLine($"Logits: Size {logits.Count}");
+        Console.WriteLine($"Logits: {logits}");
 
-        var outputLayerNudges = model.OutputProjection!.ComputeOutputNudge(logits, hotOne);
+        VectorF hotOne = model.OutputProjection!.HotOne(trainData[0].ExpectedOutputTokenId);
+        Console.WriteLine($"HotOne: Size {hotOne.Count}");
+        Console.WriteLine($"HotOne: {hotOne}");
 
+        VectorF outputLayerNudges = model.OutputProjection!.ComputeOutputNudge(logits, hotOne);
+        Console.WriteLine($"OutputLayerNudges: Size {outputLayerNudges.Count}");
+        Console.WriteLine($"OutputLayerNudges: {outputLayerNudges}");
 
         // // Get the training score for this model
         // float baselinePredictionScore = 0f;

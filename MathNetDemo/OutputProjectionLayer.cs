@@ -191,11 +191,11 @@ public class OutputProjectionLayer
         MatrixF logits = Forward(forwardMatrix);
         VectorF aggregated = logits.ColumnSums().Divide(logits.RowCount);
 
-        // float min = aggregated.Minimum();
-        // float max = aggregated.Maximum();
-        // VectorF normalizedaggregated = aggregated.Map(x => (x - min) / (max - min));
+        float min = aggregated.Minimum();
+        float max = aggregated.Maximum();
+        VectorF normalizedaggregated = aggregated.Map(x => (x - min) / (max - min));
 
-        return aggregated;
+        return normalizedaggregated;
     }
 
     // For a Loss function:
