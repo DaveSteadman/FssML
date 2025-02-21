@@ -4,6 +4,7 @@
 // dotnet new console -n MathNetDemo
 // cd MathNetDemo
 // dotnet add package MathNet.Numerics
+// dotnet add package TorchSharp
 // dotnet run
 
 // Update environment
@@ -14,7 +15,7 @@
 
 // Codespace Commands
 // ==================
-// git commit -am "training progress"
+// git commit -am "TorchSharp conversion"
 // git add <filename>
 // git push
 
