@@ -15,7 +15,7 @@
 
 // Codespace Commands
 // ==================
-// git commit -am "TorchSharp conversion"
+// git commit -am "multithreaded cpu training, decimated noise"
 // git add <filename>
 // git push
 
@@ -559,17 +559,17 @@ namespace MathNetDemo
 
         public static void DemoFirstModelRun()
         {
-            string modeldirname = "./Model_005";
+            string modeldirname = "./Model_006";
             string input = File.ReadAllText("SampleStr.txt");
 
             //TrainingFramework.CreateInitialModel(modeldirname);
 
-            // TrainingFramework.TrainModel(modeldirname, input);
+            TrainingFramework.TrainModel(modeldirname, input);
 
-            // TransformerModel model2  = TransformerModel.LoadModel("./Model_005");
-            // TrainingFramework.NextTokens(model2, "The rain in spain", 10);
+            TransformerModel model2  = TransformerModel.LoadModel(modeldirname);
+            TrainingFramework.NextTokens(model2, "you shall now pay me in full", 10);
 
-            TrainingFramework.TrainModel_Backprop(modeldirname, input);
+            //TrainingFramework.TrainModel_Backprop(modeldirname, input);
         }
 
         // --------------------------------------------------------------------------------------------

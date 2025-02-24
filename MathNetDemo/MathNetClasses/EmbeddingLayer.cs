@@ -124,6 +124,26 @@ public class EmbeddingLayer
 
     // --------------------------------------------------------------------------------------------
 
+    public void AddLimitedNoise(float absOffset, float percentChanged)
+    {
+        float halfOffset = absOffset / 2f;
+        for (int i = 0; i < VocabSize; i++)
+        {
+            for (int j = 0; j < EmbeddingDim; j++)
+            {
+                if (random.NextDouble() < percentChanged)
+                {
+                    float offset = (float)(random.NextDouble() * absOffset - halfOffset);
+                    EmbeddingMatrix[i, j] += offset;
+                }
+                // else: parameter remains unchanged.
+            }
+        }
+        EmbeddingMatrix = EmbeddingMatrix.TanhNormalize();
+    }
+
+    // --------------------------------------------------------------------------------------------
+
     public void Normalize(float min, float max)
     {
         // float minVal = EmbeddingMatrix.Enumerate().Min();

@@ -13,6 +13,8 @@ public class OutputProjectionLayer
     public MatrixF Weights { get; set; }
     public VectorF Biases  { get; set; }
 
+    private static readonly Random random = new Random();
+
     public OutputProjectionLayer(int inputDim, int outputDim)
     {
         InputDim  = inputDim;
@@ -178,6 +180,37 @@ public class OutputProjectionLayer
         VectorF noiseB = DenseVector.CreateRandom(OutputDim, new ContinuousUniform(-absOffset, absOffset));
 
         // Add noise to the weights and biases.
+        Weights += noiseW;
+        Biases  += noiseB;
+    }
+
+    public void AddLimitedNoise(float absOffset, float percentChanged)
+    {
+        // Create full noise matrices/vectors.
+        MatrixF noiseW = DenseMatrix.CreateRandom(InputDim, OutputDim, new ContinuousUniform(-absOffset, absOffset));
+        VectorF noiseB = DenseVector.CreateRandom(OutputDim, new ContinuousUniform(-absOffset, absOffset));
+
+        // Only apply noise to a fraction of the parameters.
+        for (int i = 0; i < InputDim; i++)
+        {
+            for (int j = 0; j < OutputDim; j++)
+            {
+                if (random.NextDouble() >= percentChanged)
+                {
+                    noiseW[i, j] = 0f;
+                }
+            }
+        }
+
+        for (int j = 0; j < OutputDim; j++)
+        {
+            if (random.NextDouble() >= percentChanged)
+            {
+                noiseB[j] = 0f;
+            }
+        }
+
+        // Add the sparsified noise to the weights and biases.
         Weights += noiseW;
         Biases  += noiseB;
     }

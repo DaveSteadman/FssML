@@ -118,7 +118,7 @@ public class TransformerModel
     public EmbeddingLayer?        Embedding        { get; set; } = null;
     public PositionalEncoder?     PositionalEnc    { get; set; } = null;
     public SelfAttention?         SelfAtt          { get; set; } = null;
-    public FeedForwardLayer?      FeedForward      { get; set; } = null;
+    //public FeedForwardLayer?      FeedForward      { get; set; } = null;
     public OutputProjectionLayer? OutputProjection { get; set; } = null;
 
     // --------------------------------------------------------------------------------------------
@@ -168,6 +168,10 @@ public class TransformerModel
         }
         Console.Write($"Done\n");
         Vocab.SaveToFile(Filenames.VocabPath);
+
+        // delay a moment for file save
+        System.Threading.Thread.Sleep(1000);
+
         TokenVocab.PerformLimitSizePass(Filenames.VocabPath, targetTokenCount);
         Vocab = TokenVocab.LoadFromFile(Filenames.VocabPath);
 
@@ -213,13 +217,13 @@ public class TransformerModel
             throw new Exception("Self-attention must be created before creating the feed-forward layer.");
 
         ModelDetails.FFHiddenDim = ModelDetails.EmbeddingDim * 4;
-        FeedForward = new FeedForwardLayer(ModelDetails.EmbeddingDim, ModelDetails.FFHiddenDim);
+        //FeedForward = new FeedForwardLayer(ModelDetails.EmbeddingDim, ModelDetails.FFHiddenDim);
     }
 
     public void Create06_CreateOutputProjection()
     {
-        if (FeedForward == null)
-            throw new Exception("Feed-forward must be created before creating the output projection.");
+        //if (FeedForward == null)
+        //    throw new Exception("Feed-forward must be created before creating the output projection.");
 
         OutputProjection = new OutputProjectionLayer(ModelDetails.EmbeddingDim, Vocab!.Count);
     }
@@ -240,7 +244,7 @@ public class TransformerModel
         newModel.Embedding        = Embedding!.DeepCopy();
         newModel.PositionalEnc    = PositionalEnc!.DeepCopy();
         newModel.SelfAtt          = SelfAtt!.DeepCopy();
-        newModel.FeedForward      = FeedForward!.DeepCopy();
+        //newModel.FeedForward      = FeedForward!.DeepCopy();
         newModel.OutputProjection = OutputProjection!.DeepCopy();
 
         return newModel;
@@ -251,12 +255,15 @@ public class TransformerModel
     // --------------------------------------------------------------------------------------------
 
     // Add random +/- noise to all model parameters.
-    public void AddNoise(float absNoiseVal, int passcycle = 0)
+    public void AddNoise(float absNoiseVal)
     {
-        Embedding?.AddNoise(absNoiseVal);
-        SelfAtt?.AddNoise(absNoiseVal);
-        FeedForward?.AddNoise(absNoiseVal);
-        OutputProjection?.AddNoise(absNoiseVal);
+        float percentToChange = 1f; // 5% of values to change
+        float fractionTochange = percentToChange / 100f;
+
+        Embedding?.AddLimitedNoise(absNoiseVal, fractionTochange);
+        SelfAtt?.AddLimitedNoise(absNoiseVal, fractionTochange);
+        //FeedForward?.AddNoise(absNoiseVal);
+        OutputProjection?.AddLimitedNoise(absNoiseVal, fractionTochange);
     }
 
     // --------------------------------------------------------------------------------------------
@@ -440,7 +447,7 @@ public class TransformerModel
         sb.AppendLine("------------");
         sb.AppendLine($"Model Path: {DirPath}");
         sb.AppendLine($"Model Parameters: {ParamCount()}");
-        sb.AppendLine($"Objects Present: [Vocab: {Vocab != null}] [Embedding: {Embedding != null}] [Positional Encoding: {PositionalEnc != null}] [Self-Attention: {SelfAtt != null}] [Feed-Forward: {FeedForward != null}] [Output Projection: {OutputProjection != null}]");
+        sb.AppendLine($"Objects Present: [Vocab: {Vocab != null}] [Embedding: {Embedding != null}] [Positional Encoding: {PositionalEnc != null}] [Self-Attention: {SelfAtt != null}] [Output Projection: {OutputProjection != null}]");
         sb.AppendLine($"Vocab Size: {Vocab!.Count}");
         sb.AppendLine($"Embedding: {Embedding!.Report()}");
         sb.AppendLine($"Positional Encoding: {PositionalEnc!.Report()}");
@@ -504,11 +511,12 @@ public class TransformerModel
         Vocab?.SaveToFile(Filenames.VocabPath);
         Embedding?.SaveToFile(Filenames.EmbeddingPath);
         SelfAtt?.SaveToFile(Filenames.SelfAttPath);
-        FeedForward?.SaveToFile(Filenames.FeedForwardPath);
+        //FeedForward?.SaveToFile(Filenames.FeedForwardPath);
         OutputProjection?.SaveToFile(Filenames.OutputProjectionPath);
 
         Embedding?.SaveToBinary(Filenames.BinEmbeddingPath);
         SelfAtt?.SaveToBinary(Filenames.BinSelfAttPath);
+        //FeedForward?.SaveToBinary(Filenames.BinFeedForwardPath);
         OutputProjection?.SaveToBinary(Filenames.BinOutputProjectionPath);
 
     }
@@ -531,7 +539,7 @@ public class TransformerModel
         //model.SelfAtt          = SelfAttention.LoadFromFile(model.Filenames.SelfAttPath);
         model.SelfAtt          = SelfAttention.LoadFromBinary(model.Filenames.BinSelfAttPath);
 
-        model.FeedForward      = FeedForwardLayer.LoadFromFile(model.Filenames.FeedForwardPath);
+        //model.FeedForward      = FeedForwardLayer.LoadFromFile(model.Filenames.FeedForwardPath);
 
         //model.OutputProjection = OutputProjectionLayer.LoadFromFile(model.Filenames.OutputProjectionPath);
         model.OutputProjection = OutputProjectionLayer.LoadFromBinary(model.Filenames.BinOutputProjectionPath);

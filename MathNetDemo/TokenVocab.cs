@@ -250,11 +250,20 @@ public class TokenVocab
         {
             while (!reader.EndOfStream)
             {
-                string line = reader.ReadLine();
+                string? line = reader.ReadLine();
+
+                if (line == null)
+                {
+                    Console.WriteLine("Warning: Empty line in vocabulary file.");
+                    continue;
+                }
 
                 var matches = Regex.Matches(line, "\"([^\"]*)\"");
                 if (matches.Count != 2)
-                throw new Exception("Invalid line in vocabulary file.");
+                {
+                    string matchesStr = String.Join("|", matches);
+                    throw new Exception($"Invalid line in vocabulary file: {line} // {matchesStr} // {matches.Count}");
+                }
 
                 string valueStr = matches[0].Groups[1].Value;
                 string key      = matches[1].Groups[1].Value;

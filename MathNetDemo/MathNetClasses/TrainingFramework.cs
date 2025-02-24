@@ -24,8 +24,8 @@ public static class TrainingFramework
         var model = new TransformerModel(dirname);
 
         model.Create01_CreateVocab("./SampleStr.txt", 1000);
-        model.Create02_CreateEmbedding(32);
-        model.Create03_CreatePositionalEncoding(10);
+        model.Create02_CreateEmbedding(50);
+        model.Create03_CreatePositionalEncoding(16);
         model.Create04_CreateSelfAttention();
         model.Create05_CreateFeedForward();
         model.Create06_CreateOutputProjection();
@@ -37,7 +37,7 @@ public static class TrainingFramework
     // --------------------------------------------------------------------------------------------
 
     // TrainingFramework.TrainModel
-    public static void TrainModel(string modeldirname, string trainingdata)
+    public static async void TrainModel(string modeldirname, string trainingdata)
     {
         // Start the timer
         RunTimer timer = new RunTimer();
@@ -47,7 +47,7 @@ public static class TrainingFramework
         Console.WriteLine($"Model Report: {model.Report()}");
 
         // Crte the training data
-        List<TrainingInput> trainData = ConstructTrainingPass(model, trainingdata);
+        List<TrainingInput> trainData = ConstructTrainingPass(model, trainingdata, 50);
 
         // Get the training score for this model
         float baselinePredictionScore = 0f;
@@ -60,16 +60,57 @@ public static class TrainingFramework
         Console.WriteLine($"\nBaseline score: {baselinePredictionScore}\n");
 
 
-        int numPasses = 500;
+        int numPasses  = 100;
         float noiseVal = 1f;
 
         List<float> last10Scores = new List<float>();
 
+        // var (newmodel, newscore) = TrainModelThread(model, trainData, baselinePredictionScore, 100);
+        // Console.WriteLine($"New Model Score: {newscore}");
+
+
+
+/*
+        // Run two instances of TrainModelThread in parallel
+        var task1 = Task.Run(() => TrainModelThread(model, trainData, baselinePredictionScore, 100));
+        var task2 = Task.Run(() => TrainModelThread(model, trainData, baselinePredictionScore, 100));
+
+        Task.WaitAll(task1, task2);
+
+        var result1 = task1.Result;
+        var result2 = task2.Result;
+
+        var (newmodel, newscore) = result1.newScore > result2.newScore ? result1 : result2;
+        Console.WriteLine($"New Model Score: {newscore}");
+*/
+
+
+
+        // Run multiple instances of TrainModelThread in parallel
+        int numTasks = 16;
+        Task<(TransformerModel newmodel, float newScore)>[] tasks = new Task<(TransformerModel newmodel, float newScore)>[numTasks];
+        for (int i = 0; i < numTasks; i++)
+        {
+            int threadID = i;
+            tasks[threadID] = Task.Run(() => TrainModelThread(model, trainData, baselinePredictionScore, 25, threadID));
+        }
+
+        Task.WaitAll(tasks);
+        //var results = await Task.WhenAll(tasks);
+
+
+        // Find the best result
+        var bestResult = tasks.Select(t => t.Result).OrderByDescending(r => r.newScore).First();
+        var (newmodel, newscore) = bestResult;
+        Console.WriteLine($"New Model Score: {newscore}");
+
+        TransformerModel newmodel2 = newmodel.DeepCopy();
+
         for (int i = 0; i < numPasses; i++)
         {
             // Create a deep copy of the model
-            TransformerModel modelMutation = model.DeepCopy();
-            modelMutation.AddNoise(noiseVal, i);
+            TransformerModel modelMutation = newmodel2.DeepCopy();
+            modelMutation.AddNoise(noiseVal);
 
             //Console.WriteLine($"Checksums: Original {model.CheckSum()} // Mutation {modelMutation.CheckSum()}");
 
@@ -89,10 +130,10 @@ public static class TrainingFramework
                 model = modelMutation;
                 baselinePredictionScore = newPredictionScore;
 
-
-                model.DirPath = "./Model_005";
+                model.DirPath = modeldirname;
                 model.SaveModel();
 
+                Console.WriteLine($"--- Training Pass {i} // {baselinePredictionScore} // {newPredictionScore} // {noiseVal:F3} --- ");
             }
             // else
             // {
@@ -100,42 +141,103 @@ public static class TrainingFramework
             //         noiseVal *= 0.95f;
             // }
 
-            Console.WriteLine($"--- Training Pass {i} // {baselinePredictionScore} // {newPredictionScore} // {noiseVal:F3} --- ");
+            //Console.WriteLine($"--- Training Pass {i} // {baselinePredictionScore} // {newPredictionScore} // {noiseVal:F3} --- ");
 
             // Break if there has been a console keypress
             if (Console.KeyAvailable)
                 break;
 
             // Update the last 10 scores
-            last10Scores.Add(newPredictionScore);
-            if (last10Scores.Count > 10)
-                last10Scores.RemoveAt(0);
+            // last10Scores.Add(newPredictionScore);
+            // if (last10Scores.Count > 10)
+            //     last10Scores.RemoveAt(0);
 
             // If the average score, plus the min max range, is less than the baselinePredictionScore, increase the noise
-            float avgScore = last10Scores.Average();
-            float minScore = last10Scores.Min();
-            float maxScore = last10Scores.Max();
-            float scoreRange = maxScore - minScore;
-            if (minScore + scoreRange < baselinePredictionScore)
-            {
-                noiseVal *= 1.1f;
-            }
-            else
-            {
-                noiseVal *= 0.9f;
-            }
-            noiseVal = 1f;
+            // float avgScore = last10Scores.Average();
+            // float minScore = last10Scores.Min();
+            // float maxScore = last10Scores.Max();
+            // float scoreRange = maxScore - minScore;
+            // if (minScore + scoreRange < baselinePredictionScore)
+            // {
+            //     noiseVal *= 1.1f;
+            // }
+            // else
+            // {
+            //     noiseVal *= 0.9f;
+            // }
+            // noiseVal = 1f;
         }
+
+
+        model.DirPath = modeldirname;
+        model.SaveModel();
+
 
         // Output the elapsed time
         Console.WriteLine($"Elapsed time: {timer.ElapsedSeconds:F3} seconds");
     }
 
     // --------------------------------------------------------------------------------------------
+    // MARK: TRAIN01 - Thread
+    // --------------------------------------------------------------------------------------------
+
+    // Create a background thread that takes in a model, a training set and a score, and returns a new model with its score
+
+    // Usage:
+    // var (newmodel, newscore) = TrainModelThread(model, trainData, baselinePredictionScore, 100);
+
+    public static (TransformerModel newmodel, float newScore) TrainModelThread(
+        TransformerModel model,
+        List<TrainingInput> trainData,
+        float baselinePredictionScore,
+        int numPasses,
+        int threadID)
+    {
+        Console.WriteLine($"Thread {threadID} // Starting");
+
+        // Initialise the return values
+        TransformerModel retmodel = model.DeepCopy();
+        float retScore            = baselinePredictionScore;
+
+
+        for (int i = 0; i < numPasses; i++)
+        {
+            // Create a deep copy of the model
+            TransformerModel modelMutation = retmodel.DeepCopy();
+
+            // Add the noise
+            float noiseVal = 1f;
+            modelMutation.AddNoise(noiseVal);
+
+            // Run the prediction, looking for a better (higher) score
+            float newPredictionScore = 0f;
+            foreach (TrainingInput input in trainData)
+            {
+                newPredictionScore += modelMutation.PredictionScore(input.InputTokenIdList, input.ExpectedOutputTokenId);
+            }
+
+            // If the new model is better, save it
+            if (newPredictionScore > retScore)
+            {
+                // Save the new model
+                retmodel = modelMutation;
+                retScore = newPredictionScore;
+
+                Console.WriteLine($"Thread {threadID} // Pass {i} // Score {newPredictionScore}");
+            }
+        }
+
+        Console.WriteLine($"Thread {threadID} // Finished");
+
+        return (retmodel, retScore);
+    }
+
+
+    // --------------------------------------------------------------------------------------------
     // MARK: TRAIN02 - Backprop
     // --------------------------------------------------------------------------------------------
 
-        public static void TrainModel_Backprop(string modeldirname, string trainingdata)
+    public static void TrainModel_Backprop(string modeldirname, string trainingdata)
     {
         // Start the timer
         RunTimer timer = new RunTimer();
@@ -279,17 +381,22 @@ public static class TrainingFramework
             //     break;
         }
 
-        Random rnd = new Random();
-        List<TrainingInput> randomTrainingSample = trainingPass.OrderBy(x => rnd.Next()).Take(numEntries).ToList();
+        // Select a random set of data
+        //Random rnd = new Random();
+        //List<TrainingInput> trainingSampleList = trainingPass.OrderBy(x => rnd.Next()).Take(numEntries).ToList();
+
+        // select the first X number of list entries
+        List<TrainingInput> trainingSampleList = trainingPass.Take(numEntries).ToList();
+
 
         // List the first ten training inputs
         for (int i = 0; i < 10; i++)
         {
-            Console.WriteLine($"Training Input {i}: {model.Vocab.DebugTokenList(randomTrainingSample[i].InputTokenIdList)} -> {model.Vocab.GetTokenString(randomTrainingSample[i].ExpectedOutputTokenId)}");
+            Console.WriteLine($"Training Input {i}: {model.Vocab.DebugTokenList(trainingSampleList[i].InputTokenIdList)} -> {model.Vocab.GetTokenString(trainingSampleList[i].ExpectedOutputTokenId)}");
         }
 
         //return trainingPass;
-        return randomTrainingSample;
+        return trainingSampleList;
     }
 
     // --------------------------------------------------------------------------------------------

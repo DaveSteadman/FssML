@@ -24,6 +24,8 @@ public class SelfAttention
     // Output projection weight matrix. Shape: (ModelDim, ModelDim)
     public MatrixF W_o { get; private set; }
 
+    private static readonly Random random = new Random();
+
     // --------------------------------------------------------------------------------------------
 
     // Creates a new self-attention layer with the given model dimensionality.
@@ -96,6 +98,53 @@ public class SelfAttention
 
         NormalizeWeights();
     }
+
+
+    public void AddLimitedNoise(float absOffset, float percentChanged)
+    {
+        // The offset for each value is plus/minus a random value in the range [-absOffset, absOffset].
+        float rangeMin = -absOffset;
+        float rangeMax = absOffset;
+
+        // Generate initial offset matrices with random noise.
+        MatrixF offsetq = DenseMatrix.Build.Random(ModelDim, ModelDim, new ContinuousUniform(rangeMin, rangeMax));
+        MatrixF offsetk = DenseMatrix.Build.Random(ModelDim, ModelDim, new ContinuousUniform(rangeMin, rangeMax));
+        MatrixF offsetv = DenseMatrix.Build.Random(ModelDim, ModelDim, new ContinuousUniform(rangeMin, rangeMax));
+        MatrixF offseto = DenseMatrix.Build.Random(ModelDim, ModelDim, new ContinuousUniform(rangeMin, rangeMax));
+
+        // For each element in each matrix, only keep the noise if a random draw is less than percentChanged.
+        for (int i = 0; i < ModelDim; i++)
+        {
+            for (int j = 0; j < ModelDim; j++)
+            {
+                if (random.NextDouble() >= percentChanged)
+                {
+                    offsetq[i, j] = 0f;
+                }
+                if (random.NextDouble() >= percentChanged)
+                {
+                    offsetk[i, j] = 0f;
+                }
+                if (random.NextDouble() >= percentChanged)
+                {
+                    offsetv[i, j] = 0f;
+                }
+                if (random.NextDouble() >= percentChanged)
+                {
+                    offseto[i, j] = 0f;
+                }
+            }
+        }
+
+        // Apply the (sparsified) noise offsets.
+        W_q += offsetq;
+        W_k += offsetk;
+        W_v += offsetv;
+        W_o += offseto;
+
+        NormalizeWeights();
+    }
+
 
     public void NormalizeWeights()
     {
