@@ -258,21 +258,54 @@ public class TokenVocab
                     continue;
                 }
 
-                var matches = Regex.Matches(line, "\"([^\"]*)\"");
-                if (matches.Count != 2)
-                {
-                    string matchesStr = String.Join("|", matches);
-                    throw new Exception($"Invalid line in vocabulary file: {line} // {matchesStr} // {matches.Count}");
-                }
 
-                string valueStr = matches[0].Groups[1].Value;
-                string key      = matches[1].Groups[1].Value;
 
-                if (!String.IsNullOrEmpty(key) && !String.IsNullOrEmpty(valueStr))
+
+                // Step 1: Find the initial quoted number and comma.
+                var initialMatch = Regex.Match(line, "^\\s*\"(\\d+)\"\\s*(?:,\\s*|\\s+)");
+                if (!initialMatch.Success)
                 {
-                    int tokenId = int.Parse(valueStr);
-                    vocab.VocabDictionary[key] = tokenId;
+                    throw new Exception($"Invalid line (missing initial quoted number and comma): {line}");
                 }
+                int tokenId = int.Parse(initialMatch.Groups[1].Value);
+
+                // Remove the matched part from the line.
+                string remainder = line.Substring(initialMatch.Length);
+
+                // Step 2: Extract the rest of the line as a quoted string.
+                // This regex assumes the rest of the line is just a quoted string with anything inside.
+                var textMatch = Regex.Match(remainder, "^\\s*\"(.*)\"\\s*$");
+                if (!textMatch.Success)
+                {
+                    throw new Exception($"Invalid line (missing encapsulated quoted text): {line}");
+                }
+                string tokenText = textMatch.Groups[1].Value;
+
+                // Now you have tokenId and tokenText regardless of any internal characters.
+                //Console.WriteLine($"Token ID: {tokenId}, Token Text: {tokenText}");
+
+
+                vocab.VocabDictionary[tokenText] = tokenId;
+
+
+
+
+                // //var matches = Regex.Matches(line, "\"([^\"]*)\"");
+                // var matches = Regex.Matches(line, "\"((?:[^\"]|\"\")*)\"");
+                // if (matches.Count != 2)
+                // {
+                //     string matchesStr = String.Join("|", matches);
+                //     throw new Exception($"Invalid line in vocabulary file: {line} // {matchesStr} // {matches.Count}");
+                // }
+
+                // string valueStr = matches[0].Groups[1].Value;
+                // string key      = matches[1].Groups[1].Value;
+
+                // if (!String.IsNullOrEmpty(key) && !String.IsNullOrEmpty(valueStr))
+                // {
+                //     int tokenId = int.Parse(valueStr);
+                //     vocab.VocabDictionary[key] = tokenId;
+                // }
             }
         }
         return vocab;

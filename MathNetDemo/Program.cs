@@ -15,7 +15,7 @@
 
 // Codespace Commands
 // ==================
-// git commit -am "multithreaded cpu training, decimated noise"
+// git commit -am "multithreaded cpu training"
 // git add <filename>
 // git push
 
@@ -559,15 +559,23 @@ namespace MathNetDemo
 
         public static void DemoFirstModelRun()
         {
-            string modeldirname = "./Model_006";
+            string modeldirname = "./Model_007";
             string input = File.ReadAllText("SampleStr.txt");
 
             //TrainingFramework.CreateInitialModel(modeldirname);
 
-            TrainingFramework.TrainModel(modeldirname, input);
+            int numCycles = 25;
+            for(int i = 1; i <= numCycles; i++)
+            {
+                Console.WriteLine($"\n\n---- TRAIN {i}/{numCycles} ----------------\n");
 
-            TransformerModel model2  = TransformerModel.LoadModel(modeldirname);
-            TrainingFramework.NextTokens(model2, "you shall now pay me in full", 10);
+                TrainingFramework.TrainModel(modeldirname, input);
+
+                Console.WriteLine($"\n\n---- RUN {i}/{numCycles} ----------------\n");
+
+                TransformerModel model2  = TransformerModel.LoadModel(modeldirname);
+                TrainingFramework.NextTokens(model2, "you shall now pay me in full", 10);
+            }
 
             //TrainingFramework.TrainModel_Backprop(modeldirname, input);
         }

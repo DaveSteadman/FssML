@@ -121,6 +121,8 @@ public class TransformerModel
     //public FeedForwardLayer?      FeedForward      { get; set; } = null;
     public OutputProjectionLayer? OutputProjection { get; set; } = null;
 
+    private Random random = new Random();
+
     // --------------------------------------------------------------------------------------------
     // MARK: Constructor
     // --------------------------------------------------------------------------------------------
@@ -192,7 +194,7 @@ public class TransformerModel
 
     public void Create03_CreatePositionalEncoding(int inputLen)
     {
-        ModelDetails.InputLen = 10;
+        ModelDetails.InputLen = inputLen;
 
         if (Embedding == null)
             throw new Exception("Embedding must be created before creating the positional encoding.");
@@ -255,15 +257,19 @@ public class TransformerModel
     // --------------------------------------------------------------------------------------------
 
     // Add random +/- noise to all model parameters.
-    public void AddNoise(float absNoiseVal)
+    public void AddNoise(float absNoiseVal, float percentToChange)
     {
-        float percentToChange = 1f; // 5% of values to change
-        float fractionTochange = percentToChange / 100f;
+        //float percentToChange = 1f; // 5% of values to change
 
-        Embedding?.AddLimitedNoise(absNoiseVal, fractionTochange);
-        SelfAtt?.AddLimitedNoise(absNoiseVal, fractionTochange);
-        //FeedForward?.AddNoise(absNoiseVal);
-        OutputProjection?.AddLimitedNoise(absNoiseVal, fractionTochange);
+        // create a random number up to the specified value
+        float realNoise   = (float)(random.NextDouble()) * absNoiseVal;
+        float realPercent = (float)(random.NextDouble()) * percentToChange;
+
+        float fractionTochange = realPercent / 100f;
+
+        Embedding?.AddLimitedNoise(realNoise, fractionTochange);
+        SelfAtt?.AddLimitedNoise(realNoise, fractionTochange);
+        OutputProjection?.AddLimitedNoise(realNoise, fractionTochange);
     }
 
     // --------------------------------------------------------------------------------------------
