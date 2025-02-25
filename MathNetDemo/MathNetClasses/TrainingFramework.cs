@@ -185,7 +185,6 @@ public static class TrainingFramework
         int numPasses,
         int threadID)
     {
-
         // Initialise the return values
         TransformerModel retmodel = model.DeepCopy();
         float retScore            = baselinePredictionScore;
@@ -203,8 +202,8 @@ public static class TrainingFramework
             TransformerModel modelMutation = retmodel.DeepCopy();
 
             // Add the noise
-            float noiseVal = 2f;
-            float percentToChange = 2f;
+            float noiseVal = 3f;
+            float percentToChange = 1.0f;
             modelMutation.AddNoise(noiseVal, percentToChange);
 
             // Run the prediction, looking for a better (higher) score

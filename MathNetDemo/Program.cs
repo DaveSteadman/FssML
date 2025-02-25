@@ -575,6 +575,9 @@ namespace MathNetDemo
 
                 TransformerModel model2  = TransformerModel.LoadModel(modeldirname);
                 TrainingFramework.NextTokens(model2, "you shall now pay me in full", 10);
+
+                if (!TrainingFramework.validRun)
+                    break;
             }
 
             //TrainingFramework.TrainModel_Backprop(modeldirname, input);
