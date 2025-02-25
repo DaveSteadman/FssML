@@ -63,14 +63,11 @@ public static class TrainingFramework
         Console.WriteLine($"\nBaseline score: {baselinePredictionScore}\n");
 
 
-        float noiseVal = 1f;
-
-        List<float> last10Scores = new List<float>();
 
 
         // Run multiple instances of TrainModelThread in parallel
-        int numThreads = 4;
-        int numPasses  = 10;
+        int numThreads = 10;
+        int numPasses  = 30;
         Task<(TransformerModel newmodel, float newScore)>[] tasks = new Task<(TransformerModel newmodel, float newScore)>[numThreads];
         for (int i = 0; i < numThreads; i++)
         {
@@ -94,76 +91,6 @@ public static class TrainingFramework
             model.DirPath = modeldirname;
             model.SaveModel();
         }
-
-
-        // TransformerModel newmodel2 = newmodel.DeepCopy();
-
-        // for (int i = 0; i < numPasses; i++)
-        // {
-        //     // Create a deep copy of the model
-        //     TransformerModel modelMutation = newmodel2.DeepCopy();
-        //     modelMutation.AddNoise(noiseVal);
-
-        //     //Console.WriteLine($"Checksums: Original {model.CheckSum()} // Mutation {modelMutation.CheckSum()}");
-
-        //     // Run the training again, looking for a better (higher) score
-        //     float newPredictionScore = 0f;
-        //     foreach (TrainingInput input in trainData)
-        //     {
-        //         newPredictionScore += modelMutation.PredictionScore(input.InputTokenIdList, input.ExpectedOutputTokenId);
-        //     }
-
-        //     // If the new model is better, save it
-        //     if (newPredictionScore > baselinePredictionScore)
-        //     {
-        //         // noiseVal = (newPredictionScore - baselinePredictionScore) / 10f;
-
-        //         // Save the new model
-        //         model = modelMutation;
-        //         baselinePredictionScore = newPredictionScore;
-
-        //         model.DirPath = modeldirname;
-        //         model.SaveModel();
-
-        //         Console.WriteLine($"--- Training Pass {i} // {baselinePredictionScore} // {newPredictionScore} // {noiseVal:F3} --- ");
-        //     }
-        //     // else
-        //     // {
-        //     //     if (noiseVal > 0.00001f)
-        //     //         noiseVal *= 0.95f;
-        //     // }
-
-        //     //Console.WriteLine($"--- Training Pass {i} // {baselinePredictionScore} // {newPredictionScore} // {noiseVal:F3} --- ");
-
-        //     // Break if there has been a console keypress
-        //     if (Console.KeyAvailable)
-        //         break;
-
-        //     // Update the last 10 scores
-            // last10Scores.Add(newPredictionScore);
-            // if (last10Scores.Count > 10)
-            //     last10Scores.RemoveAt(0);
-
-            // If the average score, plus the min max range, is less than the baselinePredictionScore, increase the noise
-            // float avgScore = last10Scores.Average();
-            // float minScore = last10Scores.Min();
-            // float maxScore = last10Scores.Max();
-            // float scoreRange = maxScore - minScore;
-            // if (minScore + scoreRange < baselinePredictionScore)
-            // {
-            //     noiseVal *= 1.1f;
-            // }
-            // else
-            // {
-            //     noiseVal *= 0.9f;
-            // }
-            // noiseVal = 1f;
-        // }
-
-
-        // model.DirPath = modeldirname;
-        // model.SaveModel();
-
 
         // Output the elapsed time
         Console.WriteLine($"Elapsed time: {timer.ElapsedSeconds:F3} seconds");
@@ -202,8 +129,8 @@ public static class TrainingFramework
             TransformerModel modelMutation = retmodel.DeepCopy();
 
             // Add the noise
-            float noiseVal = 0.05f;
-            float percentToChange = 25.0f;
+            float noiseVal = 0.012f;
+            float percentToChange = 5.0f;
             modelMutation.AddNoise(noiseVal, percentToChange);
 
             // Run the prediction, looking for a better (higher) score
@@ -381,7 +308,7 @@ public static class TrainingFramework
         }
 
         // Select a random set of data
-        //Random rnd = new Random();
+        Random rnd = new Random();
         //List<TrainingInput> trainingSampleList = trainingPass.OrderBy(x => rnd.Next()).Take(numEntries).ToList();
 
         // select the first X number of list entries

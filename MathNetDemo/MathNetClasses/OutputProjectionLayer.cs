@@ -6,6 +6,12 @@ using MathNet.Numerics.LinearAlgebra.Single;
 using MatrixF = MathNet.Numerics.LinearAlgebra.Matrix<float>;
 using VectorF = MathNet.Numerics.LinearAlgebra.Vector<float>;
 
+public class OutputProjectionLayerNoise
+{
+    public MatrixF WeightsNoise { get; set; }
+    public VectorF BiasesNoise  { get; set; }
+}
+
 public class OutputProjectionLayer
 {
     public int InputDim  { get; }
@@ -213,6 +219,56 @@ public class OutputProjectionLayer
         // Add the sparsified noise to the weights and biases.
         Weights += noiseW;
         Biases  += noiseB;
+    }
+
+    public OutputProjectionLayerNoise CreateNoise(float absOffset)
+    {
+        // Create noise matrices.
+        MatrixF noiseW = DenseMatrix.CreateRandom(InputDim, OutputDim, new ContinuousUniform(-absOffset, absOffset));
+        VectorF noiseB = DenseVector.CreateRandom(OutputDim, new ContinuousUniform(-absOffset, absOffset));
+
+        OutputProjectionLayerNoise noise = new OutputProjectionLayerNoise();
+        noise.WeightsNoise = noiseW;
+        noise.BiasesNoise  = noiseB;
+        return noise;
+    }
+
+    public OutputProjectionLayerNoise CreateLimitedNoise(float absOffset, float percentChanged)
+    {
+        // Create full noise matrices/vectors.
+        MatrixF noiseW = DenseMatrix.CreateRandom(InputDim, OutputDim, new ContinuousUniform(-absOffset, absOffset));
+        VectorF noiseB = DenseVector.CreateRandom(OutputDim, new ContinuousUniform(-absOffset, absOffset));
+
+        // Only apply noise to a fraction of the parameters.
+        for (int i = 0; i < InputDim; i++)
+        {
+            for (int j = 0; j < OutputDim; j++)
+            {
+                if (random.NextDouble() >= percentChanged)
+                {
+                    noiseW[i, j] = 0f;
+                }
+            }
+        }
+
+        for (int j = 0; j < OutputDim; j++)
+        {
+            if (random.NextDouble() >= percentChanged)
+            {
+                noiseB[j] = 0f;
+            }
+        }
+
+        OutputProjectionLayerNoise noise = new OutputProjectionLayerNoise();
+        noise.WeightsNoise = noiseW;
+        noise.BiasesNoise  = noiseB;
+        return noise;
+    }
+
+    public void AddNoise(OutputProjectionLayerNoise noise)
+    {
+        Weights += noise.WeightsNoise;
+        Biases  += noise.BiasesNoise;
     }
 
     // --------------------------------------------------------------------------------------------

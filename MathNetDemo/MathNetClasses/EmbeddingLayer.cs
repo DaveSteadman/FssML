@@ -122,26 +122,9 @@ public class EmbeddingLayer
         EmbeddingMatrix = EmbeddingMatrix.TanhNormalize();
     }
 
-    // --------------------------------------------------------------------------------------------
-
-    public MatrixF CreateNoise(float absOffset)
-    {
-        float halfOffset = (float)absOffset / 2f;
-        MatrixF noise = DenseMatrix.Build.Random(VocabSize, EmbeddingDim, new ContinuousUniform(-halfOffset, halfOffset));
-        return noise;
-    }
-
-    public void AddNoiseMatrix(MatrixF noise)
-    {
-        EmbeddingMatrix = EmbeddingMatrix.Add(noise);
-        EmbeddingMatrix = EmbeddingMatrix.TanhNormalize();
-    }
-
-    // --------------------------------------------------------------------------------------------
-
     public void AddLimitedNoise(float absOffset, float percentChanged)
     {
-        float halfOffset = absOffset / 2f;
+        float halfOffset = (float)absOffset / 2f;
         for (int i = 0; i < VocabSize; i++)
         {
             for (int j = 0; j < EmbeddingDim; j++)
@@ -154,6 +137,38 @@ public class EmbeddingLayer
                 // else: parameter remains unchanged.
             }
         }
+        EmbeddingMatrix = EmbeddingMatrix.TanhNormalize();
+    }
+
+    // --------------------------------------------------------------------------------------------
+
+    public MatrixF CreateNoise(float absOffset)
+    {
+        float halfOffset = (float)absOffset / 2f;
+        MatrixF noise = DenseMatrix.Build.Random(VocabSize, EmbeddingDim, new ContinuousUniform(-halfOffset, halfOffset));
+        return noise;
+    }
+
+    public MatrixF CreateLimitedNoise(float absOffset, float percentChanged)
+    {
+        float halfOffset = (float)absOffset / 2f;
+        MatrixF noise = DenseMatrix.Build.Random(VocabSize, EmbeddingDim, new ContinuousUniform(-halfOffset, halfOffset));
+        for (int i = 0; i < VocabSize; i++)
+        {
+            for (int j = 0; j < EmbeddingDim; j++)
+            {
+                if (random.NextDouble() >= percentChanged)
+                {
+                    noise[i, j] = 0.0f;
+                }
+            }
+        }
+        return noise;
+    }
+
+    public void AddNoiseMatrix(MatrixF noise)
+    {
+        EmbeddingMatrix = EmbeddingMatrix.Add(noise);
         EmbeddingMatrix = EmbeddingMatrix.TanhNormalize();
     }
 

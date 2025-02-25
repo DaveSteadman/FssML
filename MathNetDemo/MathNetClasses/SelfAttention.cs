@@ -6,6 +6,15 @@ using MathNet.Numerics.Distributions;
 using MatrixF = MathNet.Numerics.LinearAlgebra.Matrix<float>;
 using VectorF = MathNet.Numerics.LinearAlgebra.Vector<float>;
 
+public class SelfAttentionNoise
+{
+    public MatrixF W_qn { get; set; }
+    public MatrixF W_kn { get; set; }
+    public MatrixF W_vn { get; set; }
+    public MatrixF W_on { get; set; }
+}
+
+
 public class SelfAttention
 {
     // The dimensionality of the model (and of the query, key, value vectors).
@@ -153,6 +162,83 @@ public class SelfAttention
         W_v.TanhNormalize();
         W_o.TanhNormalize();
     }
+
+    public SelfAttentionNoise CreateNoise(float absOffset)
+    {
+        // The offset for each value is plus/minus a random value in the range [-absOffset, absOffset].
+        float rangeMin = -absOffset;
+        float rangeMax = absOffset;
+
+        // Initialize weight matrices.
+        MatrixF offsetq = DenseMatrix.Build.Random(ModelDim, ModelDim, new ContinuousUniform(rangeMin, rangeMax));
+        MatrixF offsetk = DenseMatrix.Build.Random(ModelDim, ModelDim, new ContinuousUniform(rangeMin, rangeMax));
+        MatrixF offsetv = DenseMatrix.Build.Random(ModelDim, ModelDim, new ContinuousUniform(rangeMin, rangeMax));
+        MatrixF offseto = DenseMatrix.Build.Random(ModelDim, ModelDim, new ContinuousUniform(rangeMin, rangeMax));
+
+        SelfAttentionNoise noise = new SelfAttentionNoise();
+        noise.W_qn = offsetq;
+        noise.W_kn = offsetk;
+        noise.W_vn = offsetv;
+        noise.W_on = offseto;
+
+        return noise;
+    }
+
+    public SelfAttentionNoise CreateLimitedNoise(float absOffset, float percentChanged)
+    {
+        // The offset for each value is plus/minus a random value in the range [-absOffset, absOffset].
+        float rangeMin = -absOffset;
+        float rangeMax = absOffset;
+
+        // Generate initial offset matrices with random noise.
+        MatrixF offsetq = DenseMatrix.Build.Random(ModelDim, ModelDim, new ContinuousUniform(rangeMin, rangeMax));
+        MatrixF offsetk = DenseMatrix.Build.Random(ModelDim, ModelDim, new ContinuousUniform(rangeMin, rangeMax));
+        MatrixF offsetv = DenseMatrix.Build.Random(ModelDim, ModelDim, new ContinuousUniform(rangeMin, rangeMax));
+        MatrixF offseto = DenseMatrix.Build.Random(ModelDim, ModelDim, new ContinuousUniform(rangeMin, rangeMax));
+
+        // For each element in each matrix, only keep the noise if a random draw is less than percentChanged.
+        for (int i = 0; i < ModelDim; i++)
+        {
+            for (int j = 0; j < ModelDim; j++)
+            {
+                if (random.NextDouble() >= percentChanged)
+                {
+                    offsetq[i, j] = 0f;
+                }
+                if (random.NextDouble() >= percentChanged)
+                {
+                    offsetk[i, j] = 0f;
+                }
+                if (random.NextDouble() >= percentChanged)
+                {
+                    offsetv[i, j] = 0f;
+                }
+                if (random.NextDouble() >= percentChanged)
+                {
+                    offseto[i, j] = 0f;
+                }
+            }
+        }
+
+        SelfAttentionNoise noise = new SelfAttentionNoise();
+        noise.W_qn = offsetq;
+        noise.W_kn = offsetk;
+        noise.W_vn = offsetv;
+        noise.W_on = offseto;
+
+        return noise;
+    }
+
+    public void AddNoise(SelfAttentionNoise noise)
+    {
+        W_q += noise.W_qn;
+        W_k += noise.W_kn;
+        W_v += noise.W_vn;
+        W_o += noise.W_on;
+
+        NormalizeWeights();
+    }
+
 
     // --------------------------------------------------------------------------------------------
 

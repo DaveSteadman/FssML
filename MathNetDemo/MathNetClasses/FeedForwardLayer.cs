@@ -10,6 +10,14 @@ using MathNet.Numerics.Distributions;
 using MatrixF = MathNet.Numerics.LinearAlgebra.Matrix<float>;
 using VectorF = MathNet.Numerics.LinearAlgebra.Vector<float>;
 
+public class FeedForwardLayerNoise
+{
+    public MatrixF W1n { get; set; }
+    public VectorF b1n { get; set; }
+    public MatrixF W2n { get; set; }
+    public VectorF b2n { get; set; }
+}
+
 public class FeedForwardLayer
 {
     // Input/output dimension (d_model) and hidden dimension (d_ff)
@@ -90,6 +98,40 @@ public class FeedForwardLayer
         // add noise to the biases
         b1 = b1 + b1_noise;
         b2 = b2 + b2_noise;
+    }
+
+    // --------------------------------------------------------------------------------------------
+
+    public FeedForwardLayerNoise CreateNoise(float absOffset)
+    {
+        // create a noise matrix
+        MatrixF W1_noise = DenseMatrix.Build.Random(d_model, d_ff, new ContinuousUniform(-absOffset, absOffset));
+        MatrixF W2_noise = DenseMatrix.Build.Random(d_ff, d_model, new ContinuousUniform(-absOffset, absOffset));
+
+        // create a noise vector
+        VectorF b1_noise = DenseVector.Build.Random(d_ff, new ContinuousUniform(-absOffset, absOffset));
+        VectorF b2_noise = DenseVector.Build.Random(d_model, new ContinuousUniform(-absOffset, absOffset));
+
+        FeedForwardLayerNoise noise = new FeedForwardLayerNoise();
+        noise.W1n = W1_noise;
+        noise.b1n = b1_noise;
+        noise.W2n = W2_noise;
+        noise.b2n = b2_noise;
+
+        return noise;
+    }
+
+    // --------------------------------------------------------------------------------------------
+
+    public void AddNoise(FeedForwardLayerNoise noise)
+    {
+        // add noise to the weights
+        W1 = W1 + noise.W1n;
+        W2 = W2 + noise.W2n;
+
+        // add noise to the biases
+        b1 = b1 + noise.b1n;
+        b2 = b2 + noise.b2n;
     }
 
     // --------------------------------------------------------------------------------------------
