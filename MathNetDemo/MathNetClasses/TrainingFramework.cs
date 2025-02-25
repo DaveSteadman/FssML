@@ -202,8 +202,8 @@ public static class TrainingFramework
             TransformerModel modelMutation = retmodel.DeepCopy();
 
             // Add the noise
-            float noiseVal = 3f;
-            float percentToChange = 1.0f;
+            float noiseVal = 0.05f;
+            float percentToChange = 25.0f;
             modelMutation.AddNoise(noiseVal, percentToChange);
 
             // Run the prediction, looking for a better (higher) score

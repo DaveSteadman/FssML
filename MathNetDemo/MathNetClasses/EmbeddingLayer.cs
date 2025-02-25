@@ -124,6 +124,21 @@ public class EmbeddingLayer
 
     // --------------------------------------------------------------------------------------------
 
+    public MatrixF CreateNoise(float absOffset)
+    {
+        float halfOffset = (float)absOffset / 2f;
+        MatrixF noise = DenseMatrix.Build.Random(VocabSize, EmbeddingDim, new ContinuousUniform(-halfOffset, halfOffset));
+        return noise;
+    }
+
+    public void AddNoiseMatrix(MatrixF noise)
+    {
+        EmbeddingMatrix = EmbeddingMatrix.Add(noise);
+        EmbeddingMatrix = EmbeddingMatrix.TanhNormalize();
+    }
+
+    // --------------------------------------------------------------------------------------------
+
     public void AddLimitedNoise(float absOffset, float percentChanged)
     {
         float halfOffset = absOffset / 2f;
