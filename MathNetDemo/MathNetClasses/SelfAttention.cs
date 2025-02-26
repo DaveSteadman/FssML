@@ -229,7 +229,7 @@ public class SelfAttention
         return noise;
     }
 
-    public void AddNoise(SelfAttentionNoise noise)
+    public void ApplyNoise(SelfAttentionNoise noise)
     {
         W_q += noise.W_qn;
         W_k += noise.W_kn;

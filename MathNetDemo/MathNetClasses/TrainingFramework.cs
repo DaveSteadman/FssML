@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.Concurrent;
 
 using MatrixF = MathNet.Numerics.LinearAlgebra.Matrix<float>;  // Alias for Matrix<float>
 using VectorF = MathNet.Numerics.LinearAlgebra.Vector<float>;  // Alias for Vector<float>
@@ -20,6 +21,32 @@ public class TrainingInput
 public static class TrainingFramework
 {
     public static bool validRun = false;
+
+    // --------------------------------------------------------------------------------------------
+    // MARK: Static thread-safe queue
+    // --------------------------------------------------------------------------------------------
+
+    private static readonly ConcurrentQueue<ModelNoise> NoiseQueue = new ConcurrentQueue<ModelNoise>();
+
+    // Append a value from any thread
+    public static void Enqueue(ModelNoise value)
+    {
+        NoiseQueue.Enqueue(value);
+    }
+
+    // Remove a value in a thread-safe manner
+    public static bool TryDequeue(out ModelNoise value)
+    {
+        return NoiseQueue.TryDequeue(out value);
+    }
+
+    // Check if the queue has any content
+    public static bool HasContent()
+    {
+        return !NoiseQueue.IsEmpty;
+    }
+
+    // --------------------------------------------------------------------------------------------
 
     public static void CreateInitialModel(string dirname)
     {
@@ -62,7 +89,7 @@ public static class TrainingFramework
         // Output the baseline loss
         Console.WriteLine($"\nBaseline score: {baselinePredictionScore}\n");
 
-
+        float initialScore = baselinePredictionScore;
 
 
         // Run multiple instances of TrainModelThread in parallel
@@ -92,8 +119,45 @@ public static class TrainingFramework
             model.SaveModel();
         }
 
-        // Output the elapsed time
-        Console.WriteLine($"Elapsed time: {timer.ElapsedSeconds:F3} seconds");
+        Console.WriteLine($"\n\nApplying winning noise: {NoiseQueue.Count} items\n\n");
+
+        // Apply all successful noise to the model
+        float retScore = baselinePredictionScore;
+        while (TryDequeue(out ModelNoise noise))
+        {
+            if (!validRun) break;
+            if (Console.KeyAvailable) { Console.WriteLine("Keystroke detected: ValidRun set false"); validRun = false; }
+
+            TransformerModel modelMutation = model.DeepCopy();
+            modelMutation.ApplyNoise(noise);
+
+            float newPredictionScore = 0f;
+            foreach (TrainingInput input in trainData)
+            {
+                newPredictionScore += modelMutation.PredictionScore(input.InputTokenIdList, input.ExpectedOutputTokenId);
+            }
+
+            // If the new model is better, save it
+            if (newPredictionScore > retScore)
+            {
+                // Save the new model
+                model = modelMutation;
+                retScore = newPredictionScore;
+
+                Console.WriteLine($"Postthreads noise: // Score {newPredictionScore}");
+
+                model = modelMutation;
+                model.DirPath = modeldirname;
+                model.SaveModel();
+            }
+        }
+        // Clear out any remaining elements in the queue
+        while (TryDequeue(out ModelNoise noise)) { }
+
+        float finalScore = retScore;
+
+        // Output the elapsed time and score
+        Console.WriteLine($"Elapsed time: {timer.ElapsedSeconds:F3} seconds // score {initialScore:F3} -> {finalScore:F3} = {finalScore - initialScore:F3}");
     }
 
     // --------------------------------------------------------------------------------------------
@@ -129,9 +193,11 @@ public static class TrainingFramework
             TransformerModel modelMutation = retmodel.DeepCopy();
 
             // Add the noise
-            float noiseVal = 0.012f;
-            float percentToChange = 5.0f;
-            modelMutation.AddNoise(noiseVal, percentToChange);
+            float noiseVal = 0.1f;
+            float percentToChange = 1.0f;
+            ModelNoise newNoise = modelMutation.CreateLimitedNoise(noiseVal, percentToChange);
+            modelMutation.ApplyNoise(newNoise);
+
 
             // Run the prediction, looking for a better (higher) score
             float newPredictionScore = 0f;
@@ -148,6 +214,8 @@ public static class TrainingFramework
                 retScore = newPredictionScore;
 
                 Console.WriteLine($"Thread {threadID} // Pass {i}/{numPasses} // Score {newPredictionScore}");
+
+                NoiseQueue.Enqueue(newNoise);
             }
         }
 

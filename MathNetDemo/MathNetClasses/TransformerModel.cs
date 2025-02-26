@@ -108,6 +108,17 @@ public struct TransformerModelDetails
 // --------------------------------------------------------------------------------------------
 // --------------------------------------------------------------------------------------------
 
+public struct ModelNoise
+{
+    public MatrixF embeddingNoise                                { set; get; }
+    public SelfAttentionNoise selfAttNoise                       { set; get; }
+    public OutputProjectionLayerNoise outputProjectionLayerNoise { set; get; }
+}
+
+// --------------------------------------------------------------------------------------------
+// --------------------------------------------------------------------------------------------
+// --------------------------------------------------------------------------------------------
+
 public class TransformerModel
 {
     public string            DirPath     { get; set; } = "";
@@ -270,6 +281,32 @@ public class TransformerModel
         Embedding?.AddLimitedNoise(realNoise, fractionTochange);
         SelfAtt?.AddLimitedNoise(realNoise, fractionTochange);
         OutputProjection?.AddLimitedNoise(realNoise, fractionTochange);
+    }
+
+    public ModelNoise CreateLimitedNoise(float absNoiseVal, float percentToChange)
+    {
+        //float percentToChange = 1f; // 5% of values to change
+
+        // create a random number up to the specified value
+        float realNoise   = (float)(random.NextDouble()) * absNoiseVal;
+        float realPercent = (float)(random.NextDouble()) * percentToChange;
+
+        float fractionTochange = realPercent / 100f;
+
+        ModelNoise noise = new ModelNoise();
+
+        noise.embeddingNoise             = Embedding!.CreateLimitedNoise(realNoise, fractionTochange);
+        noise.selfAttNoise               = SelfAtt!.CreateLimitedNoise(realNoise, fractionTochange);
+        noise.outputProjectionLayerNoise = OutputProjection!.CreateLimitedNoise(realNoise, fractionTochange);
+
+        return noise;
+    }
+
+    public void ApplyNoise(ModelNoise noise)
+    {
+        Embedding!.ApplyNoise(noise.embeddingNoise);
+        SelfAtt!.ApplyNoise(noise.selfAttNoise);
+        OutputProjection!.ApplyNoise(noise.outputProjectionLayerNoise);
     }
 
     // --------------------------------------------------------------------------------------------

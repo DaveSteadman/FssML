@@ -166,7 +166,7 @@ public class EmbeddingLayer
         return noise;
     }
 
-    public void AddNoiseMatrix(MatrixF noise)
+    public void ApplyNoise(MatrixF noise)
     {
         EmbeddingMatrix = EmbeddingMatrix.Add(noise);
         EmbeddingMatrix = EmbeddingMatrix.TanhNormalize();

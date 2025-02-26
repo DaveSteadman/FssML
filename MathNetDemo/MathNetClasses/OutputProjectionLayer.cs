@@ -265,7 +265,7 @@ public class OutputProjectionLayer
         return noise;
     }
 
-    public void AddNoise(OutputProjectionLayerNoise noise)
+    public void ApplyNoise(OutputProjectionLayerNoise noise)
     {
         Weights += noise.WeightsNoise;
         Biases  += noise.BiasesNoise;
