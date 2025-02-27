@@ -20,6 +20,7 @@ public struct TransformerModelFilenames
 {
     public string ModelPath            { get; set; }
     public string VocabPath            { get; set; }
+    public string BigramPath           { get; set; }
     public string EmbeddingPath        { get; set; }
     public string SelfAttPath          { get; set; }
     public string FeedForwardPath      { get; set; }
@@ -36,6 +37,7 @@ public struct TransformerModelFilenames
     {
         ModelPath               = System.IO.Path.Combine(dirPath, "model.txt");
         VocabPath               = System.IO.Path.Combine(dirPath, "vocab.txt");
+        BigramPath              = System.IO.Path.Combine(dirPath, "bigram.txt");
         EmbeddingPath           = System.IO.Path.Combine(dirPath, "embedding.txt");
         SelfAttPath             = System.IO.Path.Combine(dirPath, "selfatt.txt");
         FeedForwardPath         = System.IO.Path.Combine(dirPath, "feedforward.txt");
@@ -126,6 +128,7 @@ public class TransformerModel
     public TransformerModelDetails ModelDetails = new TransformerModelDetails();
 
     public TokenVocab?            Vocab            { get; set; } = null;
+    public TokenBigram?           Bigram           { get; set; } = null;
     public EmbeddingLayer?        Embedding        { get; set; } = null;
     public PositionalEncoder?     PositionalEnc    { get; set; } = null;
     public SelfAttention?         SelfAtt          { get; set; } = null;
@@ -190,6 +193,23 @@ public class TransformerModel
 
         ModelDetails.VocabSize = Vocab.Count;
     }
+
+    public void Create01_CreateBigram(string vocabFilepath)
+    {
+        // Load the input string from file
+        string input = File.ReadAllText(vocabFilepath);
+        List<string> tokList   = Vocab!.TokenizeToStrings(input);
+        List<int>    tokIdList = Vocab!.TokenizeToIds(input);
+
+        Bigram = new TokenBigram(ModelDetails.VocabSize);
+        Bigram.AddTokenLinks(tokIdList);
+
+        // Clear the entries for fixed tokens
+        Bigram.ClearLinksForToken(0); // <PAD>
+        Bigram.ClearLinksForToken(1); // <UNK>
+        Bigram.ClearLinksForToken(2); // <EOS>
+    }
+
 
     public void Create02_CreateEmbedding(int embeddingDim)
     {
@@ -552,6 +572,7 @@ public class TransformerModel
 
         ModelDetails.SaveToFile(Filenames.ModelPath);
         Vocab?.SaveToFile(Filenames.VocabPath);
+        Bigram?.SaveToFile(Filenames.BigramPath);
         Embedding?.SaveToFile(Filenames.EmbeddingPath);
         SelfAtt?.SaveToFile(Filenames.SelfAttPath);
         //FeedForward?.SaveToFile(Filenames.FeedForwardPath);
@@ -573,6 +594,8 @@ public class TransformerModel
 
         // Load the model parameters from a JSON file.
         model.Vocab            = TokenVocab.LoadFromFile(model.Filenames.VocabPath);
+
+        model.Bigram = TokenBigram.LoadFromFile(model.Filenames.BigramPath);
 
         //model.Embedding        = EmbeddingLayer.LoadFromFile(model.Filenames.EmbeddingPath);
         model.Embedding = EmbeddingLayer.LoadFromBinary(model.Filenames.BinEmbeddingPath);

@@ -3,7 +3,8 @@ using System.Collections.Generic;
 using System.Collections.Concurrent;
 
 using MatrixF = MathNet.Numerics.LinearAlgebra.Matrix<float>;  // Alias for Matrix<float>
-using VectorF = MathNet.Numerics.LinearAlgebra.Vector<float>;  // Alias for Vector<float>
+using VectorF = MathNet.Numerics.LinearAlgebra.Vector<float>;
+using System.Runtime.CompilerServices;  // Alias for Vector<float>
 
 
 // TrainingFramework:
@@ -48,13 +49,18 @@ public static class TrainingFramework
 
     // --------------------------------------------------------------------------------------------
 
-    public static void CreateInitialModel(string dirname)
+    public static void CreateInitialModel(
+        string dirname,
+        int vocabSize = 2500,
+        int embeddingSize = 100,
+        int encodingPositions = 25)
     {
         var model = new TransformerModel(dirname);
 
-        model.Create01_CreateVocab("./SampleStr.txt", 2500);
-        model.Create02_CreateEmbedding(100);
-        model.Create03_CreatePositionalEncoding(25);
+        model.Create01_CreateVocab("./SampleStr.txt", vocabSize);
+        model.Create01_CreateBigram("./SampleStr.txt");
+        model.Create02_CreateEmbedding(embeddingSize);
+        model.Create03_CreatePositionalEncoding(encodingPositions);
         model.Create04_CreateSelfAttention();
         model.Create05_CreateFeedForward();
         model.Create06_CreateOutputProjection();
@@ -68,6 +74,9 @@ public static class TrainingFramework
     // TrainingFramework.TrainModel
     public static async void TrainModel(string modeldirname, string trainingdata)
     {
+        // boilerplate await / yield call for 100ms
+        await System.Threading.Tasks.Task.Delay(100);
+
         // Start the timer, reset the flag
         RunTimer timer = new RunTimer();
         validRun = true;
