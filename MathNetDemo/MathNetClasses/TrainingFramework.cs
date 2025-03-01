@@ -52,15 +52,15 @@ public static class TrainingFramework
     public static void CreateInitialModel(
         string dirname,
         int vocabSize = 2500,
-        int embeddingSize = 100,
-        int encodingPositions = 25)
+        int inputSize = 10,
+        int embeddingSize = 100)
     {
         var model = new TransformerModel(dirname);
 
         model.Create01_CreateVocab("./SampleStr.txt", vocabSize);
         model.Create01_CreateBigram("./SampleStr.txt");
         model.Create02_CreateEmbedding(embeddingSize);
-        model.Create03_CreatePositionalEncoding(encodingPositions);
+        model.Create03_CreatePositionalEncoding(inputSize);
         model.Create04_CreateSelfAttention();
         model.Create05_CreateFeedForward();
         model.Create06_CreateOutputProjection();
@@ -75,7 +75,7 @@ public static class TrainingFramework
     public static async void TrainModel(string modeldirname, string trainingdata)
     {
         // boilerplate await / yield call for 100ms
-        await System.Threading.Tasks.Task.Delay(100);
+        //await System.Threading.Tasks.Task.Delay(100);
 
         // Start the timer, reset the flag
         RunTimer timer = new RunTimer();
