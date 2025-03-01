@@ -566,7 +566,7 @@ namespace MathNetDemo
             //TrainingFramework.CreateInitialModel(modeldirname);
 
             int numCycles = 25;
-            for(int i = 1; i <= numCycles; i++)
+            for (int i = 1; i <= numCycles; i++)
             {
                 Console.WriteLine($"\n\n---- TRAIN {i}/{numCycles} ----------------\n");
 
@@ -624,10 +624,10 @@ namespace MathNetDemo
             int startPredId = 15;
             int prevTokId = tokIdList[startPredId];
 
-            for(int predcount=0; predcount<10; predcount++)
+            for (int predcount=0; predcount<10; predcount++)
             {
                 int tokPos = startPredId + predcount;
-                int nextTokId = model.Bigram!.GetNextTokenId(prevTokId);
+                int nextTokId = model.Bigram!.GetNextTokenIdProbabilistic(prevTokId);
                 Console.WriteLine($"Actual: pos {tokPos} = [{tokList[tokPos]}: {tokIdList[tokPos]}] ");
                 Console.WriteLine($"Bigram: {prevTokId}->[{nextTokId}: >{model.Vocab!.GetTokenString(nextTokId)}<] ");
 
@@ -642,7 +642,7 @@ namespace MathNetDemo
             // Console.WriteLine($"Bigram: {tokIdList[j-1]}->[{nextId}: >{model.Vocab!.GetTokenString(nextId)}<] ");
 
             // int numCycles = 5;
-            // for(int i = 1; i <= numCycles; i++)
+            // for (int i = 1; i <= numCycles; i++)
             // {
             //     Console.WriteLine($"\n\n---- TRAIN {i}/{numCycles} ----------------\n");
 

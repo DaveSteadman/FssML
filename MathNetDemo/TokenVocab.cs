@@ -211,7 +211,7 @@ public class TokenVocab
         StringBuilder sb = new StringBuilder();
         List<string> tokList = new List<string>();
 
-        foreach(int id in tokenIds)
+        foreach (int id in tokenIds)
             tokList.Add(GetTokenString(id));
 
         if (tokList.Count != tokenIds.Count)

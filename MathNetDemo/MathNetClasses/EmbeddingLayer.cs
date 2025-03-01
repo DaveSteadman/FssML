@@ -169,7 +169,7 @@ public class EmbeddingLayer
     public void ApplyNoise(MatrixF noise)
     {
         EmbeddingMatrix = EmbeddingMatrix.Add(noise);
-        EmbeddingMatrix = EmbeddingMatrix.TanhNormalize();
+        //EmbeddingMatrix = EmbeddingMatrix.TanhNormalize();
     }
 
     // --------------------------------------------------------------------------------------------

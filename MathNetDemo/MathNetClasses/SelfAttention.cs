@@ -151,7 +151,7 @@ public class SelfAttention
         W_v += offsetv;
         W_o += offseto;
 
-        NormalizeWeights();
+        // NormalizeWeights();
     }
 
 
