@@ -29,7 +29,8 @@ using MathNet.Numerics.LinearAlgebra.Single;
 
 using MatrixF = MathNet.Numerics.LinearAlgebra.Matrix<float>;  // Alias for Matrix<float>
 using VectorF = MathNet.Numerics.LinearAlgebra.Vector<float>;
-using System.Security.Cryptography.X509Certificates;  // Alias for Vector<float>
+using System.Security.Cryptography.X509Certificates;
+using System.Threading.Tasks;  // Alias for Vector<float>
 
 
 // Issues:
@@ -642,7 +643,7 @@ namespace MathNetDemo
             // Console.WriteLine($"Actual: [{tokList[j]}: {tokIdList[j]}] ");
             // Console.WriteLine($"Bigram: {tokIdList[j-1]}->[{nextId}: >{model.Vocab!.GetTokenString(nextId)}<] ");
 
-            int numCycles = 50;
+            int numCycles = 5;
             for (int i = 1; i <= numCycles; i++)
             {
                 Console.WriteLine($"\n\n---- TRAIN {i}/{numCycles} ----------------\n");
@@ -663,7 +664,7 @@ namespace MathNetDemo
 
         // --------------------------------------------------------------------------------------------
 
-        public static void DemoModel500K()
+        public static async Task DemoModel500K()
         {
             string modeldirname = "./Model_500K";
             string textFilepath = "SampleStr.txt";
@@ -708,12 +709,12 @@ namespace MathNetDemo
             // Console.WriteLine($"Actual: [{tokList[j]}: {tokIdList[j]}] ");
             // Console.WriteLine($"Bigram: {tokIdList[j-1]}->[{nextId}: >{model.Vocab!.GetTokenString(nextId)}<] ");
 
-            int numCycles = 50;
+            int numCycles = 5;
             for (int i = 1; i <= numCycles; i++)
             {
                 Console.WriteLine($"\n\n---- TRAIN {i}/{numCycles} ----------------\n");
 
-                TrainingFramework.TrainModel(modeldirname, input);
+                await TrainingFramework.TrainModel(modeldirname, input);
 
                 Console.WriteLine($"\n\n---- RUN {i}/{numCycles} ----------------\n");
 

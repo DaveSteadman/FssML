@@ -63,6 +63,8 @@ public struct TransformerModelDetails
     public int EmbeddingDim;
     public int FFHiddenDim;
     public int InputLen;
+    public float NoiseVal;
+    public float PercentChange;
 
     public TransformerModelDetails()
     {
@@ -70,14 +72,18 @@ public struct TransformerModelDetails
         EmbeddingDim = 0;
         FFHiddenDim = 0;
         InputLen = 0;
+        NoiseVal = 0f;
+        PercentChange = 0f;
     }
 
-    public TransformerModelDetails(int vocabSize, int embeddingDim, int ffHiddenDim, int inputLen)
+    public TransformerModelDetails(int vocabSize, int embeddingDim, int ffHiddenDim, int inputLen, float noiseVal, float percentChange)
     {
-        VocabSize    = vocabSize;
-        EmbeddingDim = embeddingDim;
-        FFHiddenDim  = ffHiddenDim;
-        InputLen     = inputLen;
+        VocabSize     = vocabSize;
+        EmbeddingDim  = embeddingDim;
+        FFHiddenDim   = ffHiddenDim;
+        InputLen      = inputLen;
+        NoiseVal      = noiseVal;
+        PercentChange = percentChange;
     }
 
     // LoadSave
@@ -89,18 +95,23 @@ public struct TransformerModelDetails
             writer.WriteLine(EmbeddingDim);
             writer.WriteLine(FFHiddenDim);
             writer.WriteLine(InputLen);
+            writer.WriteLine(NoiseVal.ToString("F4"));
+            writer.WriteLine(PercentChange.ToString("F4"));
         }
     }
+
     public static TransformerModelDetails LoadFromFile(string filepath)
     {
         TransformerModelDetails newDetails = new();
 
         using (var reader = new StreamReader(filepath, Encoding.UTF8))
         {
-            newDetails.VocabSize    = int.Parse(reader.ReadLine());
-            newDetails.EmbeddingDim = int.Parse(reader.ReadLine());
-            newDetails.FFHiddenDim  = int.Parse(reader.ReadLine());
-            newDetails.InputLen     = int.Parse(reader.ReadLine());
+            newDetails.VocabSize     = int.Parse(reader.ReadLine());
+            newDetails.EmbeddingDim  = int.Parse(reader.ReadLine());
+            newDetails.FFHiddenDim   = int.Parse(reader.ReadLine());
+            newDetails.InputLen      = int.Parse(reader.ReadLine());
+            newDetails.NoiseVal      = float.Parse(reader.ReadLine());
+            newDetails.PercentChange = float.Parse(reader.ReadLine());
         }
         return newDetails;
     }
@@ -149,8 +160,6 @@ public class TransformerModel
         Filenames = new(DirPath);
     }
 
-
-
     // --------------------------------------------------------------------------------------------
     // MARK: Create Model
     // --------------------------------------------------------------------------------------------
@@ -186,7 +195,7 @@ public class TransformerModel
         Vocab.SaveToFile(Filenames.VocabPath);
 
         // delay a moment for file save
-        System.Threading.Thread.Sleep(1000);
+        System.Threading.Thread.Sleep(100);
 
         TokenVocab.PerformLimitSizePass(Filenames.VocabPath, targetTokenCount);
         Vocab = TokenVocab.LoadFromFile(Filenames.VocabPath);
@@ -259,6 +268,12 @@ public class TransformerModel
         //    throw new Exception("Feed-forward must be created before creating the output projection.");
 
         OutputProjection = new OutputProjectionLayer(ModelDetails.EmbeddingDim, Vocab!.Count);
+    }
+
+    public void Create07_SetupNoise(float noiseVal, float percentChange)
+    {
+        ModelDetails.NoiseVal      = noiseVal;
+        ModelDetails.PercentChange = percentChange;
     }
 
     // --------------------------------------------------------------------------------------------
@@ -496,7 +511,6 @@ public class TransformerModel
 
         return loss;
     }
-
 
     // --------------------------------------------------------------------------------------------
     // MARK: Report

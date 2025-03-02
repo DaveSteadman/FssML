@@ -53,7 +53,9 @@ public static class TrainingFramework
         string dirname,
         int vocabSize = 2500,
         int inputSize = 10,
-        int embeddingSize = 100)
+        int embeddingSize = 100,
+        float noiseVal = 0.1f,
+        float percentToChange = 1f)
     {
         var model = new TransformerModel(dirname);
 
@@ -64,6 +66,7 @@ public static class TrainingFramework
         model.Create04_CreateSelfAttention();
         model.Create05_CreateFeedForward();
         model.Create06_CreateOutputProjection();
+        model.Create07_SetupNoise(noiseVal, percentToChange);
         model.SaveModel();
     }
 
@@ -72,7 +75,7 @@ public static class TrainingFramework
     // --------------------------------------------------------------------------------------------
 
     // TrainingFramework.TrainModel
-    public static async void TrainModel(string modeldirname, string trainingdata)
+    public static async Task TrainModel(string modeldirname, string trainingdata)
     {
         // boilerplate await / yield call for 100ms
         //await System.Threading.Tasks.Task.Delay(100);
@@ -102,18 +105,19 @@ public static class TrainingFramework
 
 
         // Run multiple instances of TrainModelThread in parallel
-        int numThreads = 10;
+        int numThreads = 40;
         int numPasses  = 30;
-        Task<(TransformerModel newmodel, float newScore)>[] tasks = new Task<(TransformerModel newmodel, float newScore)>[numThreads];
+        var tasks = new List<Task<(TransformerModel newModel, float newScore)>>();
+
         for (int i = 0; i < numThreads; i++)
         {
             int threadID = i;
-            tasks[threadID] = Task.Run(() => TrainModelThread(model, trainData, baselinePredictionScore, numPasses, threadID));
+            tasks.Add(TrainModelThreadAsync(model, trainData, baselinePredictionScore, numPasses, threadID));
+
         }
 
-        Task.WaitAll(tasks);
-        //var results = await Task.WhenAll(tasks);
-
+        // Block until all threads are done
+        Task.WaitAll(tasks.ToArray());
 
         // Find the best result
         var bestResult = tasks.Select(t => t.Result).OrderByDescending(r => r.newScore).First();
@@ -176,9 +180,9 @@ public static class TrainingFramework
     // Create a background thread that takes in a model, a training set and a score, and returns a new model with its score
 
     // Usage:
-    // var (newmodel, newscore) = TrainModelThread(model, trainData, baselinePredictionScore, 100);
+    // var (newmodel, newscore) = TrainModelThreadAsync(model, trainData, baselinePredictionScore, 100);
 
-    public static (TransformerModel newmodel, float newScore) TrainModelThread(
+    public static async Task<(TransformerModel newmodel, float newScore)> TrainModelThreadAsync(
         TransformerModel model,
         List<TrainingInput> trainData,
         float baselinePredictionScore,
@@ -195,6 +199,9 @@ public static class TrainingFramework
 
         for (int i = 0; i < numPasses; i++)
         {
+            // Pause the thread, being a good citizen with lots of tasks around.
+            await Task.Yield();
+
             if (!validRun) break;
             if (Console.KeyAvailable) { Console.WriteLine("Keystroke detected: ValidRun set false"); validRun = false; }
 
@@ -202,7 +209,7 @@ public static class TrainingFramework
             TransformerModel modelMutation = retmodel.DeepCopy();
 
             // Add the noise
-            float noiseVal = 0.1f;
+            float noiseVal = 0.21f;
             float percentToChange = 1.0f;
             ModelNoise newNoise = modelMutation.CreateLimitedNoise(noiseVal, percentToChange);
             modelMutation.ApplyNoise(newNoise);
@@ -231,125 +238,6 @@ public static class TrainingFramework
         Console.WriteLine($"Thread {threadID} // Finished");
 
         return (retmodel, retScore);
-    }
-
-
-    // --------------------------------------------------------------------------------------------
-    // MARK: TRAIN02 - Backprop
-    // --------------------------------------------------------------------------------------------
-
-    public static void TrainModel_Backprop(string modeldirname, string trainingdata)
-    {
-        // Start the timer
-        RunTimer timer = new RunTimer();
-
-        // Load the model
-        TransformerModel model = TransformerModel.LoadModel(modeldirname);
-        Console.WriteLine($"Model Report: {model.Report()}");
-
-        // Create the training data
-        List<TrainingInput> trainData = ConstructTrainingPass(model, trainingdata, 100);
-
-        // perform the forward pass for one line, to produce a single output.
-        var embeddings        = model.Embedding!.LookupListToMatrix(trainData[0].InputTokenIdList);
-        var encodedEmbeddings = model.PositionalEnc!.ApplyPositionalEncoding(embeddings);
-        var selfAttOutput     = model.SelfAtt!.Forward(encodedEmbeddings);
-
-        VectorF logits = model.OutputProjection!.RawOutputs(selfAttOutput);
-        Console.WriteLine($"Logits: Size {logits.Count}");
-        Console.WriteLine($"Logits: {logits}");
-
-        VectorF hotOne = model.OutputProjection!.HotOne(trainData[0].ExpectedOutputTokenId);
-        Console.WriteLine($"HotOne: Size {hotOne.Count}");
-        Console.WriteLine($"HotOne: {hotOne}");
-
-        VectorF outputLayerNudges = model.OutputProjection!.ComputeOutputNudge(logits, hotOne);
-        Console.WriteLine($"OutputLayerNudges: Size {outputLayerNudges.Count}");
-        Console.WriteLine($"OutputLayerNudges: {outputLayerNudges}");
-
-
-        //MatrixF selfAttNudges = model.OutputProjection!.UpdateParameters(MatrixF input, VectorF outputNudge, float learningRate)
-
-        // // Get the training score for this model
-        // float baselinePredictionScore = 0f;
-        // foreach (TrainingInput input in trainData)
-        // {
-        //     baselinePredictionScore += model.PredictionScore(input.InputTokenIdList, input.ExpectedOutputTokenId);
-        // }
-
-        // // Output the baseline loss
-        // Console.WriteLine($"\nBaseline score: {baselinePredictionScore}\n");
-
-
-        // int numPasses = 500;
-        // float noiseVal = 1f;
-
-        // List<float> last10Scores = new List<float>();
-
-        // for (int i = 0; i < numPasses; i++)
-        // {
-        //     // Create a deep copy of the model
-        //     TransformerModel modelMutation = model.DeepCopy();
-        //     modelMutation.AddNoise(noiseVal, i);
-
-        //     //Console.WriteLine($"Checksums: Original {model.CheckSum()} // Mutation {modelMutation.CheckSum()}");
-
-        //     // Run the training again, looking for a better (higher) score
-        //     float newPredictionScore = 0f;
-        //     foreach (TrainingInput input in trainData)
-        //     {
-        //         newPredictionScore += modelMutation.PredictionScore(input.InputTokenIdList, input.ExpectedOutputTokenId);
-        //     }
-
-        //     // If the new model is better, save it
-        //     if (newPredictionScore > baselinePredictionScore)
-        //     {
-        //         // noiseVal = (newPredictionScore - baselinePredictionScore) / 10f;
-
-        //         // Save the new model
-        //         model = modelMutation;
-        //         baselinePredictionScore = newPredictionScore;
-
-
-        //         model.DirPath = "./Model_005";
-        //         model.SaveModel();
-
-        //     }
-        //     // else
-        //     // {
-        //     //     if (noiseVal > 0.00001f)
-        //     //         noiseVal *= 0.95f;
-        //     // }
-
-        //     Console.WriteLine($"--- Training Pass {i} // {baselinePredictionScore} // {newPredictionScore} // {noiseVal:F3} --- ");
-
-        //     // Break if there has been a console keypress
-        //     if (Console.KeyAvailable)
-        //         break;
-
-        //     // Update the last 10 scores
-        //     last10Scores.Add(newPredictionScore);
-        //     if (last10Scores.Count > 10)
-        //         last10Scores.RemoveAt(0);
-
-        //     // If the average score, plus the min max range, is less than the baselinePredictionScore, increase the noise
-        //     float avgScore = last10Scores.Average();
-        //     float minScore = last10Scores.Min();
-        //     float maxScore = last10Scores.Max();
-        //     float scoreRange = maxScore - minScore;
-        //     if (minScore + scoreRange < baselinePredictionScore)
-        //     {
-        //         noiseVal *= 1.1f;
-        //     }
-        //     else
-        //     {
-        //         noiseVal *= 0.9f;
-        //     }
-        //     noiseVal = 1f;
-        // }
-
-        // Output the elapsed time
-        Console.WriteLine($"Elapsed time: {timer.ElapsedSeconds:F3} seconds");
     }
 
 
