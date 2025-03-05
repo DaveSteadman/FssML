@@ -25,6 +25,7 @@ public struct TransformerModelFilenames
     public string SelfAttPath          { get; set; }
     public string FeedForwardPath      { get; set; }
     public string OutputProjectionPath { get; set; }
+    public string TrainingLogPath      { get; set; }
 
     public string BinModelPath            { get; set; }
     public string BinVocabPath            { get; set; }
@@ -42,6 +43,7 @@ public struct TransformerModelFilenames
         SelfAttPath             = System.IO.Path.Combine(dirPath, "selfatt.txt");
         FeedForwardPath         = System.IO.Path.Combine(dirPath, "feedforward.txt");
         OutputProjectionPath    = System.IO.Path.Combine(dirPath, "outputprojection.txt");
+        TrainingLogPath         = System.IO.Path.Combine(dirPath, "traininglog.txt");
 
         BinModelPath            = System.IO.Path.Combine(dirPath, "model.bin");
         BinVocabPath            = System.IO.Path.Combine(dirPath, "vocab.bin");
@@ -49,7 +51,6 @@ public struct TransformerModelFilenames
         BinSelfAttPath          = System.IO.Path.Combine(dirPath, "selfatt.bin");
         BinFeedForwardPath      = System.IO.Path.Combine(dirPath, "feedforward.bin");
         BinOutputProjectionPath = System.IO.Path.Combine(dirPath, "outputprojection.bin");
-
     }
 }
 
@@ -59,12 +60,13 @@ public struct TransformerModelFilenames
 
 public struct TransformerModelDetails
 {
-    public int VocabSize;
-    public int EmbeddingDim;
-    public int FFHiddenDim;
-    public int InputLen;
+    public int   VocabSize;
+    public int   EmbeddingDim;
+    public int   FFHiddenDim;
+    public int   InputLen;
     public float NoiseVal;
     public float PercentChange;
+    public int   NumIterations;
 
     public TransformerModelDetails()
     {
@@ -74,6 +76,7 @@ public struct TransformerModelDetails
         InputLen = 0;
         NoiseVal = 0f;
         PercentChange = 0f;
+        NumIterations = 0;
     }
 
     public TransformerModelDetails(int vocabSize, int embeddingDim, int ffHiddenDim, int inputLen, float noiseVal, float percentChange)
@@ -84,6 +87,7 @@ public struct TransformerModelDetails
         InputLen      = inputLen;
         NoiseVal      = noiseVal;
         PercentChange = percentChange;
+        NumIterations = 0;
     }
 
     // LoadSave
@@ -97,6 +101,7 @@ public struct TransformerModelDetails
             writer.WriteLine(InputLen);
             writer.WriteLine(NoiseVal.ToString("F4"));
             writer.WriteLine(PercentChange.ToString("F4"));
+            writer.WriteLine(NumIterations);
         }
     }
 
@@ -112,6 +117,7 @@ public struct TransformerModelDetails
             newDetails.InputLen      = int.Parse(reader.ReadLine());
             newDetails.NoiseVal      = float.Parse(reader.ReadLine());
             newDetails.PercentChange = float.Parse(reader.ReadLine());
+            newDetails.NumIterations = int.Parse(reader.ReadLine());
         }
         return newDetails;
     }
@@ -559,6 +565,12 @@ public class TransformerModel
         count += OutputProjection!.ParamCount();
 
         return count;
+    }
+
+    public void AppendLog(int cycleCount, float score)
+    {
+        string logLine = $"{cycleCount}, {score:F4}\n";
+        File.AppendAllText(Filenames.TrainingLogPath, logLine);
     }
 
     // --------------------------------------------------------------------------------------------

@@ -592,15 +592,15 @@ namespace MathNetDemo
 
         public static void DemoModel100K()
         {
-            string modeldirname = "./Model_100K";
+            string modeldirname = "./Model_100K-V2";
             string textFilepath = "SampleStr.txt";
             string input = File.ReadAllText(textFilepath);
 
-            // TrainingFramework.CreateInitialModel(
-            //     modeldirname,
-            //     vocabSize: 1000,
-            //     embeddingSize: 50,
-            //     encodingPositions: 10);
+            TrainingFramework.CreateInitialModel(
+                modeldirname,
+                vocabSize: 1000,
+                embeddingSize: 45,
+                inputSize: 10);
 
 
             // Load the input string from file
@@ -643,7 +643,7 @@ namespace MathNetDemo
             // Console.WriteLine($"Actual: [{tokList[j]}: {tokIdList[j]}] ");
             // Console.WriteLine($"Bigram: {tokIdList[j-1]}->[{nextId}: >{model.Vocab!.GetTokenString(nextId)}<] ");
 
-            int numCycles = 5;
+            int numCycles = 100;
             for (int i = 1; i <= numCycles; i++)
             {
                 Console.WriteLine($"\n\n---- TRAIN {i}/{numCycles} ----------------\n");
@@ -709,12 +709,12 @@ namespace MathNetDemo
             // Console.WriteLine($"Actual: [{tokList[j]}: {tokIdList[j]}] ");
             // Console.WriteLine($"Bigram: {tokIdList[j-1]}->[{nextId}: >{model.Vocab!.GetTokenString(nextId)}<] ");
 
-            int numCycles = 5;
+            int numCycles = 100;
             for (int i = 1; i <= numCycles; i++)
             {
                 Console.WriteLine($"\n\n---- TRAIN {i}/{numCycles} ----------------\n");
 
-                await TrainingFramework.TrainModel(modeldirname, input);
+                TrainingFramework.TrainModel(modeldirname, input);
 
                 Console.WriteLine($"\n\n---- RUN {i}/{numCycles} ----------------\n");
 
@@ -748,8 +748,8 @@ namespace MathNetDemo
 
             //DemoFirstModelRun();
 
-            //DemoModel100K();
-            DemoModel500K();
+            DemoModel100K();
+            //DemoModel500K();
             //DemoTinyML();
         }
     }

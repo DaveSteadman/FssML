@@ -75,7 +75,7 @@ public static class TrainingFramework
     // --------------------------------------------------------------------------------------------
 
     // TrainingFramework.TrainModel
-    public static async Task TrainModel(string modeldirname, string trainingdata)
+    public static void TrainModel(string modeldirname, string trainingdata)
     {
         // boilerplate await / yield call for 100ms
         //await System.Threading.Tasks.Task.Delay(100);
@@ -105,14 +105,21 @@ public static class TrainingFramework
 
 
         // Run multiple instances of TrainModelThread in parallel
-        int numThreads = 40;
-        int numPasses  = 30;
+        int numThreads = 20;
+        int numPasses  = 20;
+
+        float noiseVal = 0.12f;
+        float percentToChange = 1.0f;
+
+
+
         var tasks = new List<Task<(TransformerModel newModel, float newScore)>>();
+
 
         for (int i = 0; i < numThreads; i++)
         {
             int threadID = i;
-            tasks.Add(TrainModelThreadAsync(model, trainData, baselinePredictionScore, numPasses, threadID));
+            tasks.Add(TrainModelThreadAsync(model, trainData, baselinePredictionScore, numPasses, threadID, noiseVal, percentToChange));
 
         }
 
@@ -123,6 +130,9 @@ public static class TrainingFramework
         var bestResult = tasks.Select(t => t.Result).OrderByDescending(r => r.newScore).First();
         var (newmodel, newscore) = bestResult;
         Console.WriteLine($"New Model Score: {newscore}");
+
+        // Write the new score to the logfile
+        newmodel.AppendLog(newmodel.ModelDetails.NumIterations, newscore);
 
         // Save the model if its better
         if (newscore > baselinePredictionScore)
@@ -141,6 +151,7 @@ public static class TrainingFramework
             if (!validRun) break;
             if (Console.KeyAvailable) { Console.WriteLine("Keystroke detected: ValidRun set false"); validRun = false; }
 
+            model.ModelDetails.NumIterations++;
             TransformerModel modelMutation = model.DeepCopy();
             modelMutation.ApplyNoise(noise);
 
@@ -163,11 +174,15 @@ public static class TrainingFramework
                 model.DirPath = modeldirname;
                 model.SaveModel();
             }
+            newmodel.ModelDetails.NumIterations++;
         }
         // Clear out any remaining elements in the queue
         while (TryDequeue(out ModelNoise noise)) { }
 
         float finalScore = retScore;
+
+        // Write the new score to the logfile
+        newmodel.AppendLog(newmodel.ModelDetails.NumIterations, finalScore);
 
         // Output the elapsed time and score
         Console.WriteLine($"Elapsed time: {timer.ElapsedSeconds:F3} seconds // score {initialScore:F3} -> {finalScore:F3} = {finalScore - initialScore:F3}");
@@ -187,7 +202,9 @@ public static class TrainingFramework
         List<TrainingInput> trainData,
         float baselinePredictionScore,
         int numPasses,
-        int threadID)
+        int threadID,
+        float noiseVal,
+        float percentToChange)
     {
         // Initialise the return values
         TransformerModel retmodel = model.DeepCopy();
@@ -207,10 +224,11 @@ public static class TrainingFramework
 
             // Create a deep copy of the model
             TransformerModel modelMutation = retmodel.DeepCopy();
+            retmodel.ModelDetails.NumIterations++;
 
             // Add the noise
-            float noiseVal = 0.21f;
-            float percentToChange = 1.0f;
+            // float noiseVal = 0.12f;
+            // float percentToChange = 1.0f;
             ModelNoise newNoise = modelMutation.CreateLimitedNoise(noiseVal, percentToChange);
             modelMutation.ApplyNoise(newNoise);
 
