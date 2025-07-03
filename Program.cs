@@ -4,7 +4,6 @@
 // dotnet new console -n MathNetDemo
 // cd MathNetDemo
 // dotnet add package MathNet.Numerics
-// dotnet add package TorchSharp
 // dotnet run
 
 // Update environment
