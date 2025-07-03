@@ -102,8 +102,8 @@ public static class TrainingFramework
 
 
         // Run multiple instances of TrainModelThread in parallel
-        int numThreads = 20;
-        int numPasses = 20;
+        int numThreads = 10;
+        int numPasses = 100;
 
         float noiseVal = model.ModelDetails.NoiseVal; // e.g. 0.12 means +/-12% of the noise value
         float percentToChange = model.ModelDetails.PercentChange; // e.g. 1.0 means +/-100% of the percent change

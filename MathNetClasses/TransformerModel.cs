@@ -577,7 +577,7 @@ public class TransformerModel
 
     public void AppendLog(int cycleCount, float score)
     {
-        string logLine = $"{cycleCount}, {score:F4}\n";
+        string logLine = $"{cycleCount}, {score:F4}, {ModelDetails.NoiseVal:F4}, {ModelDetails.PercentChange:F4}\n";
         File.AppendAllText(Filenames.TrainingLogPath, logLine);
     }
 

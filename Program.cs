@@ -45,10 +45,22 @@ namespace MathNetDemo
         // MARK: v0.5
         // --------------------------------------------------------------------------------------------
 
-
-        public static void DemoModel100K()
+        public static void DemoModel100K_Create()
         {
-            string modeldirname = "./Model_100K-V2";
+            string modeldirname = "./Model_100K_V3";
+            string textFilepath = "SampleStr.txt";
+            string input = File.ReadAllText(textFilepath);
+
+            TrainingFramework.CreateInitialModel(
+                modeldirname,
+                vocabSize: 2500,
+                inputSize: 10,
+                embeddingSize: 50);
+        }
+
+        public static void DemoModel100K_Train()
+        {
+            string modeldirname = "./Model_100K_V3";
             string textFilepath = "SampleStr.txt";
             string input = File.ReadAllText(textFilepath);
 
@@ -122,20 +134,20 @@ namespace MathNetDemo
 
         public static void DemoModel500K_Create()
         {
-            string modeldirname = "./Model_500K_V2";
+            string modeldirname = "./Model_500K_V3";
             string textFilepath = "SampleStr.txt";
             string input = File.ReadAllText(textFilepath);
 
             TrainingFramework.CreateInitialModel(
                 modeldirname,
-                vocabSize: 2500,
+                vocabSize: 3500,
                 inputSize: 20,
-                embeddingSize: 50);
+                embeddingSize: 60);
         }
 
         public static void DemoModel500K_Train()
         {
-            string modeldirname = "./Model_500K_V2";
+            string modeldirname = "./Model_500K_V3";
             string textFilepath = "SampleStr.txt";
             string input = File.ReadAllText(textFilepath);
 
@@ -215,7 +227,10 @@ namespace MathNetDemo
             //DemoModel500K();
             //DemoTinyML();
 
-            DemoModel500K_Train();
+            DemoModel100K_Create();
+            DemoModel100K_Train();
+
+            //DemoModel500K_Train();
         }
     }
 }
