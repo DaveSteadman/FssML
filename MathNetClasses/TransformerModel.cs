@@ -135,6 +135,7 @@ public class ModelNoise
 
     public MatrixF embeddingNoise { set; get; }
     public SelfAttentionNoise selfAttNoise                       { set; get; }
+    public FeedForwardLayerNoise feedForwardNoise                { set; get; }
     public OutputProjectionLayerNoise outputProjectionLayerNoise { set; get; }
 }
 
@@ -153,7 +154,7 @@ public class TransformerModel
     public EmbeddingLayer?        Embedding        { get; set; } = null;
     public PositionalEncoder?     PositionalEnc    { get; set; } = null;
     public SelfAttention?         SelfAtt          { get; set; } = null;
-    //public FeedForwardLayer?      FeedForward      { get; set; } = null;
+    public FeedForwardLayer?      FeedForward      { get; set; } = null;
     public OutputProjectionLayer? OutputProjection { get; set; } = null;
 
     private Random random = new Random();
@@ -269,7 +270,7 @@ public class TransformerModel
             throw new Exception("Self-attention must be created before creating the feed-forward layer.");
 
         ModelDetails.FFHiddenDim = ModelDetails.EmbeddingDim * 4;
-        //FeedForward = new FeedForwardLayer(ModelDetails.EmbeddingDim, ModelDetails.FFHiddenDim);
+        FeedForward = new FeedForwardLayer(ModelDetails.EmbeddingDim, ModelDetails.FFHiddenDim);
     }
 
     public void Create06_CreateOutputProjection()
@@ -302,7 +303,7 @@ public class TransformerModel
         newModel.Embedding        = Embedding!.DeepCopy();
         newModel.PositionalEnc    = PositionalEnc!.DeepCopy();
         newModel.SelfAtt          = SelfAtt!.DeepCopy();
-        //newModel.FeedForward      = FeedForward!.DeepCopy();
+        newModel.FeedForward      = FeedForward!.DeepCopy();
         newModel.OutputProjection = OutputProjection!.DeepCopy();
 
         return newModel;
@@ -325,6 +326,7 @@ public class TransformerModel
 
         Embedding?.AddLimitedNoise(realNoise, fractionTochange);
         SelfAtt?.AddLimitedNoise(realNoise, fractionTochange);
+        FeedForward?.AddLimitedNoise(realNoise, fractionTochange);
         OutputProjection?.AddLimitedNoise(realNoise, fractionTochange);
     }
 
@@ -346,6 +348,7 @@ public class TransformerModel
 
         noise.embeddingNoise             = Embedding!.CreateLimitedNoise(realNoise, fractionTochange);
         noise.selfAttNoise               = SelfAtt!.CreateLimitedNoise(realNoise, fractionTochange);
+        noise.feedForwardNoise           = FeedForward!.CreateLimitedNoise(realNoise, fractionTochange);
         noise.outputProjectionLayerNoise = OutputProjection!.CreateLimitedNoise(realNoise, fractionTochange);
 
         return noise;
@@ -355,6 +358,7 @@ public class TransformerModel
     {
         Embedding!.ApplyNoise(noise.embeddingNoise);
         SelfAtt!.ApplyNoise(noise.selfAttNoise);
+        FeedForward!.ApplyNoise(noise.feedForwardNoise);
         OutputProjection!.ApplyNoise(noise.outputProjectionLayerNoise);
     }
 
@@ -412,15 +416,15 @@ public class TransformerModel
         Console.WriteLine(selfAttOutput);
 
         // Apply the feed-forward layer.
-        //var feedForwardOutput = FeedForward.Apply(selfAttOutput);
+        var feedForwardOutput = FeedForward!.Forward(selfAttOutput);
 
         // Report the next token
-        int nextTokenID = OutputProjection!.PredictNextToken(selfAttOutput);
+        int nextTokenID = OutputProjection!.PredictNextToken(feedForwardOutput);
         string nextTokenStr = Vocab!.GetTokenString(nextTokenID);
         Console.WriteLine($"Next Token: [{nextTokenStr}: {nextTokenID}]");
 
         // Report the highest ranked 5 tokens
-        var topTokens = OutputProjection.TopNTokens(selfAttOutput, 5);
+        var topTokens = OutputProjection.TopNTokens(feedForwardOutput, 5);
         Console.WriteLine("Top 5 tokens:");
         foreach (var (tokenId, prob) in topTokens)
         {
@@ -429,7 +433,7 @@ public class TransformerModel
         }
 
         // determine the loss score
-        Console.WriteLine($"Loss: {OutputProjection!.Loss(selfAttOutput, nextTokenID - 1)}");
+        Console.WriteLine($"Loss: {OutputProjection!.Loss(feedForwardOutput, nextTokenID - 1)}");
 
         return nextTokenStr;
     }
@@ -445,8 +449,10 @@ public class TransformerModel
         // Apply the self-attention mechanism.
         var selfAttOutput = SelfAtt!.Forward(encodedEmbeddings);
 
+        var feedForwardOutput = FeedForward!.Forward(selfAttOutput);
+
         // Report the next token
-        int nextTokenID = OutputProjection!.PredictNextToken(selfAttOutput);
+        int nextTokenID = OutputProjection!.PredictNextToken(feedForwardOutput);
 
         return nextTokenID;
     }
@@ -497,12 +503,8 @@ public class TransformerModel
         // Apply the self-attention mechanism.
         var selfAttOutput = SelfAtt!.Forward(encodedEmbeddings);
 
-        // Self Attention Output
-        // Console.WriteLine($"Self-Attention Output:");
-        // Console.WriteLine(selfAttOutput);
-
         // Apply the feed-forward layer.
-        //var feedForwardOutput = FeedForward.Apply(selfAttOutput);
+        var feedForwardOutput = FeedForward!.Forward(selfAttOutput);
 
         // Report the next token
         // int nextTokenID = OutputProjection!.PredictNextToken(selfAttOutput);
@@ -518,10 +520,7 @@ public class TransformerModel
         //     Console.WriteLine($"- [{tokenStr}: {tokenId}] with probability {prob:F4}");
         // }
 
-        // // determine the loss score
-        // Console.WriteLine($"Loss: {OutputProjection!.Loss(selfAttOutput, nextTokenID - 1)}");
-
-        float loss = OutputProjection!.Loss(selfAttOutput, expectedNextTokenId);
+        float loss = OutputProjection!.Loss(feedForwardOutput, expectedNextTokenId);
 
         return loss;
     }
@@ -538,11 +537,12 @@ public class TransformerModel
         sb.AppendLine("------------");
         sb.AppendLine($"Model Path: {DirPath}");
         sb.AppendLine($"Model Parameters: {ParamCount()}");
-        sb.AppendLine($"Objects Present: [Vocab: {Vocab != null}] [Embedding: {Embedding != null}] [Positional Encoding: {PositionalEnc != null}] [Self-Attention: {SelfAtt != null}] [Output Projection: {OutputProjection != null}]");
+        sb.AppendLine($"Objects Present: [Vocab: {Vocab != null}] [Embedding: {Embedding != null}] [Positional Encoding: {PositionalEnc != null}] [Self-Attention: {SelfAtt != null}] [FeedForward: {FeedForward != null}] [Output Projection: {OutputProjection != null}]");
         sb.AppendLine($"Vocab Size: {Vocab!.Count}");
         sb.AppendLine($"Embedding: {Embedding!.Report()}");
         sb.AppendLine($"Positional Encoding: {PositionalEnc!.Report()}");
         sb.AppendLine($"Self-Attention: {SelfAtt!.Report()}");
+        sb.AppendLine($"FeedForward: {FeedForward!.Report()}");
         sb.AppendLine($"Output Projection: {OutputProjection!.Report()}");
 
         return sb.ToString();
@@ -556,7 +556,7 @@ public class TransformerModel
         sum += Embedding!.CheckSum();
         sum += PositionalEnc!.CheckSum();
         sum += SelfAtt!.CheckSum();
-        //sum += FeedForward!.CheckSum();
+        sum += FeedForward!.CheckSum();
         sum += OutputProjection!.CheckSum();
 
         return sum;
@@ -569,7 +569,7 @@ public class TransformerModel
         count += Embedding!.ParamCount();
         //count += PositionalEnc!.ParamCount();
         count += SelfAtt!.ParamCount();
-        //count += FeedForward!.ParamCount();
+        count += FeedForward!.ParamCount();
         count += OutputProjection!.ParamCount();
 
         return count;
@@ -609,12 +609,12 @@ public class TransformerModel
         Bigram?.SaveToFile(Filenames.BigramPath);
         Embedding?.SaveToFile(Filenames.EmbeddingPath);
         SelfAtt?.SaveToFile(Filenames.SelfAttPath);
-        //FeedForward?.SaveToFile(Filenames.FeedForwardPath);
+        FeedForward?.SaveToFile(Filenames.FeedForwardPath);
         OutputProjection?.SaveToFile(Filenames.OutputProjectionPath);
 
         Embedding?.SaveToBinary(Filenames.BinEmbeddingPath);
         SelfAtt?.SaveToBinary(Filenames.BinSelfAttPath);
-        //FeedForward?.SaveToBinary(Filenames.BinFeedForwardPath);
+        FeedForward?.SaveToBinary(Filenames.BinFeedForwardPath);
         OutputProjection?.SaveToBinary(Filenames.BinOutputProjectionPath);
 
     }
@@ -639,7 +639,7 @@ public class TransformerModel
         //model.SelfAtt          = SelfAttention.LoadFromFile(model.Filenames.SelfAttPath);
         model.SelfAtt          = SelfAttention.LoadFromBinary(model.Filenames.BinSelfAttPath);
 
-        //model.FeedForward      = FeedForwardLayer.LoadFromFile(model.Filenames.FeedForwardPath);
+        model.FeedForward      = FeedForwardLayer.LoadFromBinary(model.Filenames.BinFeedForwardPath);
 
         //model.OutputProjection = OutputProjectionLayer.LoadFromFile(model.Filenames.OutputProjectionPath);
         model.OutputProjection = OutputProjectionLayer.LoadFromBinary(model.Filenames.BinOutputProjectionPath);
