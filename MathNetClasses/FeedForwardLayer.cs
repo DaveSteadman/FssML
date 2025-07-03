@@ -24,11 +24,29 @@ public class FeedForwardLayer
     private int d_model;
     private int d_ff;
 
+    private static readonly Random random = new Random();
+
     // Weight matrices and bias vectors for the two linear transformations
     public MatrixF W1 { get; private set; }
     public VectorF b1 { get; private set; }
     public MatrixF W2 { get; private set; }
     public VectorF b2 { get; private set; }
+
+    public int ParamCount()
+    {
+        return d_model * d_ff + d_ff + d_ff * d_model + d_model;
+    }
+
+    public string Report()
+    {
+        return $"FeedForwardLayer // d_model: {d_model} // d_ff: {d_ff} // CheckSum: {CheckSum()}";
+    }
+
+    public float CheckSum()
+    {
+        float sum = W1.RowSums().Sum() + b1.Sum() + W2.RowSums().Sum() + b2.Sum();
+        return sum;
+    }
 
     /// <summary>
     /// Constructs the feed-forward layer.
@@ -100,6 +118,49 @@ public class FeedForwardLayer
         b2 = b2 + b2_noise;
     }
 
+    public void AddLimitedNoise(float absOffset, float percentChanged)
+    {
+        MatrixF W1_noise = DenseMatrix.Build.Random(d_model, d_ff, new ContinuousUniform(-absOffset, absOffset));
+        MatrixF W2_noise = DenseMatrix.Build.Random(d_ff, d_model, new ContinuousUniform(-absOffset, absOffset));
+        VectorF b1_noise = DenseVector.Build.Random(d_ff, new ContinuousUniform(-absOffset, absOffset));
+        VectorF b2_noise = DenseVector.Build.Random(d_model, new ContinuousUniform(-absOffset, absOffset));
+
+        for (int i = 0; i < d_model; i++)
+        {
+            for (int j = 0; j < d_ff; j++)
+            {
+                if (random.NextDouble() >= percentChanged)
+                    W1_noise[i, j] = 0f;
+            }
+        }
+
+        for (int i = 0; i < d_ff; i++)
+        {
+            for (int j = 0; j < d_model; j++)
+            {
+                if (random.NextDouble() >= percentChanged)
+                    W2_noise[i, j] = 0f;
+            }
+        }
+
+        for (int i = 0; i < d_ff; i++)
+        {
+            if (random.NextDouble() >= percentChanged)
+                b1_noise[i] = 0f;
+        }
+
+        for (int i = 0; i < d_model; i++)
+        {
+            if (random.NextDouble() >= percentChanged)
+                b2_noise[i] = 0f;
+        }
+
+        W1 += W1_noise;
+        W2 += W2_noise;
+        b1 += b1_noise;
+        b2 += b2_noise;
+    }
+
     // --------------------------------------------------------------------------------------------
 
     public FeedForwardLayerNoise CreateNoise(float absOffset)
@@ -121,6 +182,55 @@ public class FeedForwardLayer
         return noise;
     }
 
+    public FeedForwardLayerNoise CreateLimitedNoise(float absOffset, float percentChanged)
+    {
+        // create a noise matrix
+        MatrixF W1_noise = DenseMatrix.Build.Random(d_model, d_ff, new ContinuousUniform(-absOffset, absOffset));
+        MatrixF W2_noise = DenseMatrix.Build.Random(d_ff, d_model, new ContinuousUniform(-absOffset, absOffset));
+
+        // create a noise vector
+        VectorF b1_noise = DenseVector.Build.Random(d_ff, new ContinuousUniform(-absOffset, absOffset));
+        VectorF b2_noise = DenseVector.Build.Random(d_model, new ContinuousUniform(-absOffset, absOffset));
+
+        for (int i = 0; i < d_model; i++)
+        {
+            for (int j = 0; j < d_ff; j++)
+            {
+                if (random.NextDouble() >= percentChanged)
+                    W1_noise[i, j] = 0f;
+            }
+        }
+
+        for (int i = 0; i < d_ff; i++)
+        {
+            for (int j = 0; j < d_model; j++)
+            {
+                if (random.NextDouble() >= percentChanged)
+                    W2_noise[i, j] = 0f;
+            }
+        }
+
+        for (int i = 0; i < d_ff; i++)
+        {
+            if (random.NextDouble() >= percentChanged)
+                b1_noise[i] = 0f;
+        }
+
+        for (int i = 0; i < d_model; i++)
+        {
+            if (random.NextDouble() >= percentChanged)
+                b2_noise[i] = 0f;
+        }
+
+        FeedForwardLayerNoise noise = new FeedForwardLayerNoise();
+        noise.W1n = W1_noise;
+        noise.b1n = b1_noise;
+        noise.W2n = W2_noise;
+        noise.b2n = b2_noise;
+
+        return noise;
+    }
+
     // --------------------------------------------------------------------------------------------
 
     public void AddNoise(FeedForwardLayerNoise noise)
@@ -132,6 +242,14 @@ public class FeedForwardLayer
         // add noise to the biases
         b1 = b1 + noise.b1n;
         b2 = b2 + noise.b2n;
+    }
+
+    public void ApplyNoise(FeedForwardLayerNoise noise)
+    {
+        W1 += noise.W1n;
+        b1 += noise.b1n;
+        W2 += noise.W2n;
+        b2 += noise.b2n;
     }
 
     // --------------------------------------------------------------------------------------------
@@ -239,6 +357,105 @@ public class FeedForwardLayer
             if (b2_read_ok) layer.b2 = newB2!;
 
             return layer;
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // MARK: Binary Load Save
+    // -------------------------------------------------------------------------
+
+    public void SaveToBinary(string path)
+    {
+        const int maxRetries = 10;
+        const int delayMs = 100;
+        int retries = 0;
+        while (true)
+        {
+            try
+            {
+                using (var writer = new BinaryWriter(File.Open(path, FileMode.Create, FileAccess.Write, FileShare.None)))
+                {
+                    writer.Write(d_model);
+                    writer.Write(d_ff);
+                    for (int i = 0; i < d_model; i++)
+                    {
+                        for (int j = 0; j < d_ff; j++)
+                        {
+                            writer.Write(W1[i, j]);
+                        }
+                    }
+                    for (int i = 0; i < d_ff; i++)
+                    {
+                        writer.Write(b1[i]);
+                    }
+                    for (int i = 0; i < d_ff; i++)
+                    {
+                        for (int j = 0; j < d_model; j++)
+                        {
+                            writer.Write(W2[i, j]);
+                        }
+                    }
+                    for (int i = 0; i < d_model; i++)
+                    {
+                        writer.Write(b2[i]);
+                    }
+                }
+                break;
+            }
+            catch (IOException)
+            {
+                if (++retries >= maxRetries)
+                    throw;
+                System.Threading.Thread.Sleep(delayMs);
+            }
+        }
+    }
+
+    public static FeedForwardLayer LoadFromBinary(string path)
+    {
+        const int maxRetries = 10;
+        const int delayMs = 100;
+        int retries = 0;
+        while (true)
+        {
+            try
+            {
+                using (var reader = new BinaryReader(File.Open(path, FileMode.Open, FileAccess.Read, FileShare.Read)))
+                {
+                    int new_d_model = reader.ReadInt32();
+                    int new_d_ff = reader.ReadInt32();
+                    FeedForwardLayer layer = new FeedForwardLayer(new_d_model, new_d_ff);
+                    for (int i = 0; i < new_d_model; i++)
+                    {
+                        for (int j = 0; j < new_d_ff; j++)
+                        {
+                            layer.W1[i, j] = reader.ReadSingle();
+                        }
+                    }
+                    for (int i = 0; i < new_d_ff; i++)
+                    {
+                        layer.b1[i] = reader.ReadSingle();
+                    }
+                    for (int i = 0; i < new_d_ff; i++)
+                    {
+                        for (int j = 0; j < new_d_model; j++)
+                        {
+                            layer.W2[i, j] = reader.ReadSingle();
+                        }
+                    }
+                    for (int i = 0; i < new_d_model; i++)
+                    {
+                        layer.b2[i] = reader.ReadSingle();
+                    }
+                    return layer;
+                }
+            }
+            catch (IOException)
+            {
+                if (++retries >= maxRetries)
+                    throw;
+                System.Threading.Thread.Sleep(delayMs);
+            }
         }
     }
 }
