@@ -184,7 +184,7 @@ namespace MathNetDemo
             // Console.WriteLine($"Actual: [{tokList[j]}: {tokIdList[j]}] ");
             // Console.WriteLine($"Bigram: {tokIdList[j-1]}->[{nextId}: >{model.Vocab!.GetTokenString(nextId)}<] ");
 
-            int numCycles = 100;
+            int numCycles = 10;
             for (int i = 1; i <= numCycles; i++)
             {
                 Console.WriteLine($"\n\n---- TRAIN {i}/{numCycles} ----------------\n");
@@ -227,7 +227,7 @@ namespace MathNetDemo
             //DemoModel500K();
             //DemoTinyML();
 
-            DemoModel100K_Create();
+            // DemoModel100K_Create();
             DemoModel100K_Train();
 
             //DemoModel500K_Train();
