@@ -65,6 +65,8 @@ public static class TrainingFramework
         model.Create03_CreatePositionalEncoding(inputSize);
         model.Create04_CreateSelfAttention();
         model.Create05_CreateFeedForward();
+        model.Create04b_CreateSelfAttention2();
+        model.Create05b_CreateFeedForward2();
         model.Create06_CreateOutputProjection();
         model.Create07_SetupNoise(noiseVal, percentToChange);
         model.SaveModel();
