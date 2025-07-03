@@ -504,62 +504,95 @@ public class OutputProjectionLayer
 
     public void SaveToBinary(string filename)
     {
-        using (var writer = new BinaryWriter(File.Open(filename, FileMode.Create)))
+        // Add retry logic to avoid file access conflicts
+        const int maxRetries = 10;
+        const int delayMs = 100;
+        int retries = 0;
+        while (true)
         {
-            writer.Write(InputDim);
-            writer.Write(OutputDim);
-
-            int yAxis = Weights.RowCount;
-            int xAxis = Weights.ColumnCount;
-
-            writer.Write(Weights.RowCount);
-            writer.Write(Weights.ColumnCount);
-            for (int i = 0; i < yAxis; i++)
+            try
             {
-                for (int j = 0; j < xAxis; j++)
+                using (var writer = new BinaryWriter(File.Open(filename, FileMode.Create, FileAccess.Write, FileShare.None)))
                 {
-                    writer.Write(Weights[i, j]);
-                }
-            }
+                    writer.Write(InputDim);
+                    writer.Write(OutputDim);
 
-            writer.Write(Biases.Count);
-            for (int i = 0; i < Biases.Count; i++)
+                    int yAxis = Weights.RowCount;
+                    int xAxis = Weights.ColumnCount;
+
+                    writer.Write(Weights.RowCount);
+                    writer.Write(Weights.ColumnCount);
+                    for (int i = 0; i < yAxis; i++)
+                    {
+                        for (int j = 0; j < xAxis; j++)
+                        {
+                            writer.Write(Weights[i, j]);
+                        }
+                    }
+                    writer.Write(Biases.Count);
+                    for (int i = 0; i < Biases.Count; i++)
+                    {
+                        writer.Write(Biases[i]);
+                    }
+                }
+                break;
+            }
+            catch (System.IO.IOException)
             {
-                writer.Write(Biases[i]);
+                if (++retries >= maxRetries)
+                    throw;
+                System.Threading.Thread.Sleep(delayMs);
             }
         }
     }
 
+
     public static OutputProjectionLayer LoadFromBinary(string filename)
     {
-        using (var reader = new BinaryReader(File.Open(filename, FileMode.Open)))
+        // Add retry logic to avoid file access conflicts
+        const int maxRetries = 10;
+        const int delayMs = 100;
+        int retries = 0;
+        while (true)
         {
-            int inputDim  = reader.ReadInt32();
-            int outputDim = reader.ReadInt32();
-
-            int yAxis = reader.ReadInt32();
-            int xAxis = reader.ReadInt32();
-
-            MatrixF newW = DenseMatrix.Build.Dense(yAxis, xAxis);
-            for (int i = 0; i < yAxis; i++)
+            try
             {
-                for (int j = 0; j < xAxis; j++)
+                using (var reader = new BinaryReader(File.Open(filename, FileMode.Open, FileAccess.Read, FileShare.Read)))
                 {
-                    newW[i, j] = reader.ReadSingle();
+                    int inputDim  = reader.ReadInt32();
+                    int outputDim = reader.ReadInt32();
+
+                    int yAxis = reader.ReadInt32();
+                    int xAxis = reader.ReadInt32();
+
+                    MatrixF newW = DenseMatrix.Build.Dense(yAxis, xAxis);
+                    for (int i = 0; i < yAxis; i++)
+                    {
+                        for (int j = 0; j < xAxis; j++)
+                        {
+                            newW[i, j] = reader.ReadSingle();
+                        }
+                    }
+
+                    int biasCount = reader.ReadInt32();
+                    VectorF newB = DenseVector.Build.Dense(biasCount);
+                    for (int i = 0; i < biasCount; i++)
+                    {
+                        newB[i] = reader.ReadSingle();
+                    }
+
+                    OutputProjectionLayer layer = new OutputProjectionLayer(inputDim, outputDim);
+                    layer.Weights = newW;
+                    layer.Biases  = newB;
+                    return layer;
                 }
             }
-
-            int biasCount = reader.ReadInt32();
-            VectorF newB = DenseVector.Build.Dense(biasCount);
-            for (int i = 0; i < biasCount; i++)
+            catch (System.IO.IOException)
             {
-                newB[i] = reader.ReadSingle();
+                if (++retries >= maxRetries)
+                    throw;
+                System.Threading.Thread.Sleep(delayMs);
             }
-
-            OutputProjectionLayer layer = new OutputProjectionLayer(inputDim, outputDim);
-            layer.Weights = newW;
-            layer.Biases  = newB;
-            return layer;
         }
     }
 }

@@ -52,11 +52,11 @@ namespace MathNetDemo
             string textFilepath = "SampleStr.txt";
             string input = File.ReadAllText(textFilepath);
 
-            TrainingFramework.CreateInitialModel(
-                modeldirname,
-                vocabSize: 1000,
-                embeddingSize: 45,
-                inputSize: 10);
+            // TrainingFramework.CreateInitialModel(
+            //     modeldirname,
+            //     vocabSize: 1000,
+            //     embeddingSize: 45,
+            //     inputSize: 10);
 
 
             // Load the input string from file
@@ -120,22 +120,29 @@ namespace MathNetDemo
 
         // --------------------------------------------------------------------------------------------
 
-        public static async Task DemoModel500K()
+        public static void DemoModel500K_Create()
         {
-            string modeldirname = "./Model_500K";
+            string modeldirname = "./Model_500K_V2";
             string textFilepath = "SampleStr.txt";
             string input = File.ReadAllText(textFilepath);
 
-            // TrainingFramework.CreateInitialModel(
-            //     modeldirname,
-            //     vocabSize: 2500,
-            //     inputSize: 20,
-            //     embeddingSize: 50);
+            TrainingFramework.CreateInitialModel(
+                modeldirname,
+                vocabSize: 2500,
+                inputSize: 20,
+                embeddingSize: 50);
+        }
+
+        public static void DemoModel500K_Train()
+        {
+            string modeldirname = "./Model_500K_V2";
+            string textFilepath = "SampleStr.txt";
+            string input = File.ReadAllText(textFilepath);
 
             // Load the input string from file
             TransformerModel model = TransformerModel.LoadModel(modeldirname);
-            List<string> tokList   = model.Vocab!.TokenizeToStrings(input);
-            List<int>    tokIdList = model.Vocab!.TokenizeToIds(input);
+            List<string> tokList = model.Vocab!.TokenizeToStrings(input);
+            List<int> tokIdList = model.Vocab!.TokenizeToIds(input);
 
             // Debug print the first 15 tokens and their IDs
             for (int i = 0; i < 15; i++)
@@ -148,7 +155,7 @@ namespace MathNetDemo
             int startPredId = 15;
             int prevTokId = tokIdList[startPredId];
 
-            for (int predcount=0; predcount<10; predcount++)
+            for (int predcount = 0; predcount < 10; predcount++)
             {
                 int tokPos = startPredId + predcount;
                 int nextTokId = model.Bigram!.GetNextTokenIdProbabilistic(prevTokId);
@@ -174,7 +181,7 @@ namespace MathNetDemo
 
                 Console.WriteLine($"\n\n---- RUN {i}/{numCycles} ----------------\n");
 
-                TransformerModel model2  = TransformerModel.LoadModel(modeldirname);
+                TransformerModel model2 = TransformerModel.LoadModel(modeldirname);
                 TrainingFramework.NextTokens(model2, "you shall now pay me in full", 10);
 
                 if (!TrainingFramework.validRun)
@@ -204,9 +211,11 @@ namespace MathNetDemo
 
             //DemoFirstModelRun();
 
-            DemoModel100K();
+            //DemoModel100K();
             //DemoModel500K();
             //DemoTinyML();
+
+            DemoModel500K_Train();
         }
     }
 }

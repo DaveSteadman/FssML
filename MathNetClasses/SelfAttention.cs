@@ -411,41 +411,58 @@ public class SelfAttention
     // Save the self-attention layer to a binary file.
     public void SaveToBinary(string path)
     {
-        using (var writer = new BinaryWriter(File.Open(path, FileMode.Create)))
+        // Add retry logic to avoid file access conflicts
+        const int maxRetries = 10;
+        const int delayMs = 100;
+        int retries = 0;
+        while (true)
         {
-            writer.Write(InputLen);
-            writer.Write(ModelDim);
-
-            for (int i = 0; i < ModelDim; i++)
+            try
             {
-                for (int j = 0; j < ModelDim; j++)
+                using (var writer = new BinaryWriter(File.Open(path, FileMode.Create, FileAccess.Write, FileShare.None)))
                 {
-                    writer.Write(W_q[i, j]);
+                    writer.Write(InputLen);
+                    writer.Write(ModelDim);
+
+                    for (int i = 0; i < ModelDim; i++)
+                    {
+                        for (int j = 0; j < ModelDim; j++)
+                        {
+                            writer.Write(W_q[i, j]);
+                        }
+                    }
+
+                    for (int i = 0; i < ModelDim; i++)
+                    {
+                        for (int j = 0; j < ModelDim; j++)
+                        {
+                            writer.Write(W_k[i, j]);
+                        }
+                    }
+
+                    for (int i = 0; i < ModelDim; i++)
+                    {
+                        for (int j = 0; j < ModelDim; j++)
+                        {
+                            writer.Write(W_v[i, j]);
+                        }
+                    }
+
+                    for (int i = 0; i < ModelDim; i++)
+                    {
+                        for (int j = 0; j < ModelDim; j++)
+                        {
+                            writer.Write(W_o[i, j]);
+                        }
+                    }
                 }
+                break;
             }
-
-            for (int i = 0; i < ModelDim; i++)
+            catch (System.IO.IOException)
             {
-                for (int j = 0; j < ModelDim; j++)
-                {
-                    writer.Write(W_k[i, j]);
-                }
-            }
-
-            for (int i = 0; i < ModelDim; i++)
-            {
-                for (int j = 0; j < ModelDim; j++)
-                {
-                    writer.Write(W_v[i, j]);
-                }
-            }
-
-            for (int i = 0; i < ModelDim; i++)
-            {
-                for (int j = 0; j < ModelDim; j++)
-                {
-                    writer.Write(W_o[i, j]);
-                }
+                if (++retries >= maxRetries)
+                    throw;
+                System.Threading.Thread.Sleep(delayMs);
             }
         }
     }
@@ -456,46 +473,62 @@ public class SelfAttention
 
     public static SelfAttention LoadFromBinary(string path)
     {
-        using (var reader = new BinaryReader(File.Open(path, FileMode.Open)))
+        // Add retry logic to avoid file access conflicts
+        const int maxRetries = 10;
+        const int delayMs = 100;
+        int retries = 0;
+        while (true)
         {
-            int inputLen = reader.ReadInt32();
-            int modelDim = reader.ReadInt32();
-
-            SelfAttention layer = new SelfAttention(inputLen, modelDim);
-
-            for (int i = 0; i < modelDim; i++)
+            try
             {
-                for (int j = 0; j < modelDim; j++)
+                using (var reader = new BinaryReader(File.Open(path, FileMode.Open, FileAccess.Read, FileShare.Read)))
                 {
-                    layer.W_q[i, j] = reader.ReadSingle();
+                    int inputLen = reader.ReadInt32();
+                    int modelDim = reader.ReadInt32();
+
+                    SelfAttention layer = new SelfAttention(inputLen, modelDim);
+
+                    for (int i = 0; i < modelDim; i++)
+                    {
+                        for (int j = 0; j < modelDim; j++)
+                        {
+                            layer.W_q[i, j] = reader.ReadSingle();
+                        }
+                    }
+
+                    for (int i = 0; i < modelDim; i++)
+                    {
+                        for (int j = 0; j < modelDim; j++)
+                        {
+                            layer.W_k[i, j] = reader.ReadSingle();
+                        }
+                    }
+
+                    for (int i = 0; i < modelDim; i++)
+                    {
+                        for (int j = 0; j < modelDim; j++)
+                        {
+                            layer.W_v[i, j] = reader.ReadSingle();
+                        }
+                    }
+
+                    for (int i = 0; i < modelDim; i++)
+                    {
+                        for (int j = 0; j < modelDim; j++)
+                        {
+                            layer.W_o[i, j] = reader.ReadSingle();
+                        }
+                    }
+
+                    return layer;
                 }
             }
-
-            for (int i = 0; i < modelDim; i++)
+            catch (System.IO.IOException)
             {
-                for (int j = 0; j < modelDim; j++)
-                {
-                    layer.W_k[i, j] = reader.ReadSingle();
-                }
+                if (++retries >= maxRetries)
+                    throw;
+                System.Threading.Thread.Sleep(delayMs);
             }
-
-            for (int i = 0; i < modelDim; i++)
-            {
-                for (int j = 0; j < modelDim; j++)
-                {
-                    layer.W_v[i, j] = reader.ReadSingle();
-                }
-            }
-
-            for (int i = 0; i < modelDim; i++)
-            {
-                for (int j = 0; j < modelDim; j++)
-                {
-                    layer.W_o[i, j] = reader.ReadSingle();
-                }
-            }
-
-            return layer;
         }
     }
 

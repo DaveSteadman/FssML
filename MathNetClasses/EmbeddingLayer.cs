@@ -262,16 +262,33 @@ public class EmbeddingLayer
 
     public void SaveToBinary(string path)
     {
-        using (var writer = new BinaryWriter(File.Open(path, FileMode.Create)))
+        // Add retry logic to avoid file access conflicts
+        const int maxRetries = 10;
+        const int delayMs = 100;
+        int retries = 0;
+        while (true)
         {
-            writer.Write(VocabSize);
-            writer.Write(EmbeddingDim);
-            for (int i = 0; i < VocabSize; i++)
+            try
             {
-                for (int j = 0; j < EmbeddingDim; j++)
+                using (var writer = new BinaryWriter(File.Open(path, FileMode.Create, FileAccess.Write, FileShare.None)))
                 {
-                    writer.Write(EmbeddingMatrix[i, j]);
+                    writer.Write(VocabSize);
+                    writer.Write(EmbeddingDim);
+                    for (int i = 0; i < VocabSize; i++)
+                    {
+                        for (int j = 0; j < EmbeddingDim; j++)
+                        {
+                            writer.Write(EmbeddingMatrix[i, j]);
+                        }
+                    }
                 }
+                break;
+            }
+            catch (IOException)
+            {
+                if (++retries >= maxRetries)
+                    throw;
+                System.Threading.Thread.Sleep(delayMs);
             }
         }
     }
@@ -280,22 +297,38 @@ public class EmbeddingLayer
 
     public static EmbeddingLayer LoadFromBinary(string path)
     {
-        using (var reader = new BinaryReader(File.Open(path, FileMode.Open)))
+        // Add retry logic to avoid file access conflicts
+        const int maxRetries = 10;
+        const int delayMs = 100;
+        int retries = 0;
+        while (true)
         {
-            int vocabSize    = reader.ReadInt32();
-            int embeddingDim = reader.ReadInt32();
-
-            EmbeddingLayer embeddingLayer = new EmbeddingLayer(vocabSize, embeddingDim);
-
-            for (int i = 0; i < vocabSize; i++)
+            try
             {
-                for (int j = 0; j < embeddingDim; j++)
+                using (var reader = new BinaryReader(File.Open(path, FileMode.Open, FileAccess.Read, FileShare.Read)))
                 {
-                    embeddingLayer.EmbeddingMatrix[i, j] = reader.ReadSingle();
+                    int vocabSize    = reader.ReadInt32();
+                    int embeddingDim = reader.ReadInt32();
+
+                    EmbeddingLayer embeddingLayer = new EmbeddingLayer(vocabSize, embeddingDim);
+
+                    for (int i = 0; i < vocabSize; i++)
+                    {
+                        for (int j = 0; j < embeddingDim; j++)
+                        {
+                            embeddingLayer.EmbeddingMatrix[i, j] = reader.ReadSingle();
+                        }
+                    }
+
+                    return embeddingLayer;
                 }
             }
-
-            return embeddingLayer;
+            catch (System.IO.IOException)
+            {
+                if (++retries >= maxRetries)
+                    throw;
+                System.Threading.Thread.Sleep(delayMs);
+            }
         }
     }
 

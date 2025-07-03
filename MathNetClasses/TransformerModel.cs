@@ -111,13 +111,14 @@ public struct TransformerModelDetails
 
         using (var reader = new StreamReader(filepath, Encoding.UTF8))
         {
-            newDetails.VocabSize     = int.Parse(reader.ReadLine());
-            newDetails.EmbeddingDim  = int.Parse(reader.ReadLine());
-            newDetails.FFHiddenDim   = int.Parse(reader.ReadLine());
-            newDetails.InputLen      = int.Parse(reader.ReadLine());
-            newDetails.NoiseVal      = float.Parse(reader.ReadLine());
+            newDetails.VocabSize = int.Parse(reader.ReadLine());
+            newDetails.EmbeddingDim = int.Parse(reader.ReadLine());
+            newDetails.FFHiddenDim = int.Parse(reader.ReadLine());
+            newDetails.InputLen = int.Parse(reader.ReadLine());
+            newDetails.NoiseVal = float.Parse(reader.ReadLine());
             newDetails.PercentChange = float.Parse(reader.ReadLine());
             newDetails.NumIterations = int.Parse(reader.ReadLine());
+
         }
         return newDetails;
     }
@@ -127,9 +128,12 @@ public struct TransformerModelDetails
 // --------------------------------------------------------------------------------------------
 // --------------------------------------------------------------------------------------------
 
-public struct ModelNoise
+public class ModelNoise
 {
-    public MatrixF embeddingNoise                                { set; get; }
+    public float recordedNoise { set; get; } = 0; // 0 = no noise, 1 = noise applied
+    public float recordedPercentChange { set; get; } = 0; // 0 = no change, 1 = all values changed
+
+    public MatrixF embeddingNoise { set; get; }
     public SelfAttentionNoise selfAttNoise                       { set; get; }
     public OutputProjectionLayerNoise outputProjectionLayerNoise { set; get; }
 }
@@ -335,6 +339,10 @@ public class TransformerModel
         float fractionTochange = realPercent / 100f;
 
         ModelNoise noise = new ModelNoise();
+
+        // record the metrics, so we can analyse the successful results
+        noise.recordedNoise         = realNoise;
+        noise.recordedPercentChange = realPercent;
 
         noise.embeddingNoise             = Embedding!.CreateLimitedNoise(realNoise, fractionTochange);
         noise.selfAttNoise               = SelfAtt!.CreateLimitedNoise(realNoise, fractionTochange);

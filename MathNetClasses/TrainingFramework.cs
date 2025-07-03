@@ -77,9 +77,6 @@ public static class TrainingFramework
     // TrainingFramework.TrainModel
     public static void TrainModel(string modeldirname, string trainingdata)
     {
-        // boilerplate await / yield call for 100ms
-        //await System.Threading.Tasks.Task.Delay(100);
-
         // Start the timer, reset the flag
         RunTimer timer = new RunTimer();
         validRun = true;
@@ -106,11 +103,36 @@ public static class TrainingFramework
 
         // Run multiple instances of TrainModelThread in parallel
         int numThreads = 20;
-        int numPasses  = 20;
+        int numPasses = 20;
 
-        float noiseVal = 0.12f;
-        float percentToChange = 1.0f;
+        float noiseVal = model.ModelDetails.NoiseVal; // e.g. 0.12 means +/-12% of the noise value
+        float percentToChange = model.ModelDetails.PercentChange; // e.g. 1.0 means +/-100% of the percent change
 
+        // float noiseVal = 0.12f;
+        // float percentToChange = 1.0f;
+
+        // Use a fraction of the value for delta
+        float noiseFrac = 0.5f; // e.g. 0.5 means +/-50% of noiseVal
+        float percentFrac = 0.5f; // e.g. 0.5 means +/-50% of percentToChange
+
+        // Create lists of the noise and percent values
+        List<float> noiseValues = new List<float>();
+        List<float> percentValues = new List<float>();
+
+        for (int i = 0; i < numThreads; i++)
+        {
+            float noiseDelta = noiseVal * noiseFrac;
+            float percentDelta = percentToChange * percentFrac;
+
+            float noiseStep = (noiseDelta * 2) / numThreads;
+            float noiseThreadVal = (noiseVal - noiseDelta) + (i * noiseStep);
+
+            float percentStep = (percentDelta * 2) / numThreads;
+            float percentThreadVal = (percentToChange + percentDelta) - (i * percentStep); // Apply the largest change, to the smallest percentage
+
+            noiseValues.Add(noiseThreadVal);
+            percentValues.Add(percentThreadVal);
+        }
 
 
         var tasks = new List<Task<(TransformerModel newModel, float newScore)>>();
@@ -119,7 +141,7 @@ public static class TrainingFramework
         for (int i = 0; i < numThreads; i++)
         {
             int threadID = i;
-            tasks.Add(TrainModelThreadAsync(model, trainData, baselinePredictionScore, numPasses, threadID, noiseVal, percentToChange));
+            tasks.Add(TrainModelThreadAsync(model, trainData, baselinePredictionScore, numPasses, threadID, noiseValues[i], percentValues[i]));
 
         }
 
@@ -146,6 +168,10 @@ public static class TrainingFramework
 
         // Apply all successful noise to the model
         float retScore = baselinePredictionScore;
+
+        float totalSuccessNoise = 0f;
+        float totalSuccessPercent = 0f;
+        // int successCount = 0;
         while (TryDequeue(out ModelNoise noise))
         {
             if (!validRun) break;
@@ -173,9 +199,25 @@ public static class TrainingFramework
                 model = modelMutation;
                 model.DirPath = modeldirname;
                 model.SaveModel();
+
+                // accumulate the best noise and percentage values
+                totalSuccessNoise = max(totalSuccessNoise, noise.recordedNoise);
+                totalSuccessPercent = max(totalSuccessPercent, noise.recordedPercentChange);
+                // successCount++;
             }
             newmodel.ModelDetails.NumIterations++;
         }
+
+        // // Calculate the average noise and percent change (only if there were successes)
+        // float avgSuccessNoise = successCount > 0 ? totalSuccessNoise / successCount : 0f;
+        // float avgSuccessPercent = successCount > 0 ? totalSuccessPercent / successCount : 0f;
+
+        // Blend the model's noise and percent change values towards the best found values - takes out some of the volatility
+        model.ModelDetails.NoiseVal = halfwayto(model.ModelDetails.NoiseVal, totalSuccessNoise);
+        model.ModelDetails.PercentChange = halfwayto(model.ModelDetails.PercentChange, totalSuccessPercent);
+        model.SaveModel();
+
+
         // Clear out any remaining elements in the queue
         while (TryDequeue(out ModelNoise noise)) { }
 
@@ -208,11 +250,11 @@ public static class TrainingFramework
     {
         // Initialise the return values
         TransformerModel retmodel = model.DeepCopy();
-        float retScore            = baselinePredictionScore;
+        float retScore = baselinePredictionScore;
 
         if (!validRun) return (retmodel, retScore);
 
-        Console.WriteLine($"Thread {threadID} // Starting");
+        Console.WriteLine($"Thread {threadID,2} // Starting // Noise: {noiseVal:F4} // Percent: {percentToChange:F4}");
 
         for (int i = 0; i < numPasses; i++)
         {
@@ -247,17 +289,17 @@ public static class TrainingFramework
                 retmodel = modelMutation;
                 retScore = newPredictionScore;
 
-                Console.WriteLine($"Thread {threadID} // Pass {i}/{numPasses} // Score {newPredictionScore}");
+                // Pad threadID to width 3, right-aligned, space-padded
+                Console.WriteLine($"Thread {threadID,2} // Pass {i,2}/{numPasses} // Score {newPredictionScore}");
 
                 NoiseQueue.Enqueue(newNoise);
             }
         }
 
-        Console.WriteLine($"Thread {threadID} // Finished");
+        Console.WriteLine($"Thread {threadID,2} // Finished");
 
         return (retmodel, retScore);
     }
-
 
     // --------------------------------------------------------------------------------------------
     // MARK: Train Data
@@ -315,13 +357,13 @@ public static class TrainingFramework
     public static void NextTokens(TransformerModel model, string promptstr, int numTokens)
     {
         // tokenise the text
-        List<int> tokenIds    = model.Vocab!.TokenizeToIds(promptstr);
+        List<int> tokenIds = model.Vocab!.TokenizeToIds(promptstr);
         List<int> finalTokens = new List<int>(tokenIds);
 
         for (int i = 0; i < numTokens; i++)
         {
             // Get the last <input length> of tokens
-            List<int> inputTokenIds       = finalTokens.TakeLast(model.ModelDetails.InputLen).ToList();
+            List<int> inputTokenIds = finalTokens.TakeLast(model.ModelDetails.InputLen).ToList();
 
             // Get the last <input length> of tokens
             //List<int> inputTokenIds       = finalTokens.GetRange(finalTokens.Count - model.ModelDetails.InputLen, model.ModelDetails.InputLen);
@@ -339,4 +381,19 @@ public static class TrainingFramework
         Console.WriteLine($"Prompt: {promptstr}");
         Console.WriteLine($"Tokens: {model.Vocab.DebugTokenList(finalTokens)}");
     }
+
+
+    // --------------------------------------------------------------------------------------------
+
+    private static float max(float val1, float val2)
+    {
+        return val1 > val2 ? val1 : val2;
+    }
+
+    private static float halfwayto(float originalval, float newval)
+    {
+        // Calculate the halfway point between the original value and the new value
+        return originalval + (newval - originalval) / 2f;
+    }
+
 }
