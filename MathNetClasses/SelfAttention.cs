@@ -8,9 +8,9 @@ using VectorF = MathNet.Numerics.LinearAlgebra.Vector<float>;
 
 public class SelfAttentionNoise
 {
-    public MatrixF W_qn { get; set; }
-    public MatrixF W_kn { get; set; }
-    public MatrixF W_vn { get; set; }
+    public List<MatrixF> W_qn { get; set; } = new();
+    public List<MatrixF> W_kn { get; set; } = new();
+    public List<MatrixF> W_vn { get; set; } = new();
     public MatrixF W_on { get; set; }
 }
 
@@ -20,17 +20,14 @@ public class SelfAttention
     // The dimensionality of the model (and of the query, key, value vectors).
     public int InputLen { get; private set;}
     public int ModelDim { get; private set; }
+    public int NumHeads { get; private set; }
 
-    // Weight matrix for computing queries. Shape: (ModelDim, ModelDim)
-    public MatrixF W_q { get; private set; }
+    // Weight matrices per head
+    public List<MatrixF> W_q { get; private set; } = new();
+    public List<MatrixF> W_k { get; private set; } = new();
+    public List<MatrixF> W_v { get; private set; } = new();
 
-    // Weight matrix for computing keys. Shape: (ModelDim, ModelDim)
-    public MatrixF W_k { get; private set; }
-
-    // Weight matrix for computing values. Shape: (ModelDim, ModelDim)
-    public MatrixF W_v { get; private set; }
-
-    // Output projection weight matrix. Shape: (ModelDim, ModelDim)
+    // Output projection weight matrix. Shape: (ModelDim*NumHeads, ModelDim)
     public MatrixF W_o { get; private set; }
 
     private static readonly Random random = new Random();
@@ -39,20 +36,23 @@ public class SelfAttention
 
     // Creates a new self-attention layer with the given model dimensionality.
     // modelDim: The size of the model and each token’s embedding vector.</param>
-    public SelfAttention(int inputLen, int modelDim)
+    public SelfAttention(int inputLen, int modelDim, int numHeads = 1)
     {
         InputLen = inputLen;
         ModelDim = modelDim;
+        NumHeads = numHeads;
 
         // Create a uniform distribution for small random initialization.
         float rangeMin = -1f;
         float rangeMax =  1f;
 
-        // Initialize weight matrices.
-        W_q = DenseMatrix.Build.Random(ModelDim, ModelDim, new ContinuousUniform(rangeMin, rangeMax));
-        W_k = DenseMatrix.Build.Random(ModelDim, ModelDim, new ContinuousUniform(rangeMin, rangeMax));
-        W_v = DenseMatrix.Build.Random(ModelDim, ModelDim, new ContinuousUniform(rangeMin, rangeMax));
-        W_o = DenseMatrix.Build.Random(ModelDim, ModelDim, new ContinuousUniform(rangeMin, rangeMax));
+        for (int h = 0; h < NumHeads; h++)
+        {
+            W_q.Add(DenseMatrix.Build.Random(ModelDim, ModelDim, new ContinuousUniform(rangeMin, rangeMax)));
+            W_k.Add(DenseMatrix.Build.Random(ModelDim, ModelDim, new ContinuousUniform(rangeMin, rangeMax)));
+            W_v.Add(DenseMatrix.Build.Random(ModelDim, ModelDim, new ContinuousUniform(rangeMin, rangeMax)));
+        }
+        W_o = DenseMatrix.Build.Random(ModelDim * NumHeads, ModelDim, new ContinuousUniform(rangeMin, rangeMax));
     }
 
     // --------------------------------------------------------------------------------------------
@@ -61,10 +61,13 @@ public class SelfAttention
 
     public SelfAttention DeepCopy()
     {
-        SelfAttention newLayer = new SelfAttention(InputLen, ModelDim);
-        newLayer.W_q = W_q.Clone();
-        newLayer.W_k = W_k.Clone();
-        newLayer.W_v = W_v.Clone();
+        SelfAttention newLayer = new SelfAttention(InputLen, ModelDim, NumHeads);
+        for (int h = 0; h < NumHeads; h++)
+        {
+            newLayer.W_q.Add(W_q[h].Clone());
+            newLayer.W_k.Add(W_k[h].Clone());
+            newLayer.W_v.Add(W_v[h].Clone());
+        }
         newLayer.W_o = W_o.Clone();
         return newLayer;
     }
@@ -79,11 +82,16 @@ public class SelfAttention
         float rangeMin = min;
         float rangeMax = max;
 
-        // Initialize weight matrices.
-        W_q = DenseMatrix.Build.Random(ModelDim, ModelDim, new ContinuousUniform(rangeMin, rangeMax));
-        W_k = DenseMatrix.Build.Random(ModelDim, ModelDim, new ContinuousUniform(rangeMin, rangeMax));
-        W_v = DenseMatrix.Build.Random(ModelDim, ModelDim, new ContinuousUniform(rangeMin, rangeMax));
-        W_o = DenseMatrix.Build.Random(ModelDim, ModelDim, new ContinuousUniform(rangeMin, rangeMax));
+        W_q.Clear();
+        W_k.Clear();
+        W_v.Clear();
+        for (int h = 0; h < NumHeads; h++)
+        {
+            W_q.Add(DenseMatrix.Build.Random(ModelDim, ModelDim, new ContinuousUniform(rangeMin, rangeMax)));
+            W_k.Add(DenseMatrix.Build.Random(ModelDim, ModelDim, new ContinuousUniform(rangeMin, rangeMax)));
+            W_v.Add(DenseMatrix.Build.Random(ModelDim, ModelDim, new ContinuousUniform(rangeMin, rangeMax)));
+        }
+        W_o = DenseMatrix.Build.Random(ModelDim * NumHeads, ModelDim, new ContinuousUniform(rangeMin, rangeMax));
     }
 
     public void AddNoise(float absOffset)
@@ -93,16 +101,23 @@ public class SelfAttention
         float rangeMin = -absOffset;
         float rangeMax = absOffset;
 
-        // Initialize weight matrices.
-        MatrixF offsetq = DenseMatrix.Build.Random(ModelDim, ModelDim, new ContinuousUniform(rangeMin, rangeMax));
-        MatrixF offsetk = DenseMatrix.Build.Random(ModelDim, ModelDim, new ContinuousUniform(rangeMin, rangeMax));
-        MatrixF offsetv = DenseMatrix.Build.Random(ModelDim, ModelDim, new ContinuousUniform(rangeMin, rangeMax));
-        MatrixF offseto = DenseMatrix.Build.Random(ModelDim, ModelDim, new ContinuousUniform(rangeMin, rangeMax));
+        List<MatrixF> offsetq = new();
+        List<MatrixF> offsetk = new();
+        List<MatrixF> offsetv = new();
+        for (int h = 0; h < NumHeads; h++)
+        {
+            offsetq.Add(DenseMatrix.Build.Random(ModelDim, ModelDim, new ContinuousUniform(rangeMin, rangeMax)));
+            offsetk.Add(DenseMatrix.Build.Random(ModelDim, ModelDim, new ContinuousUniform(rangeMin, rangeMax)));
+            offsetv.Add(DenseMatrix.Build.Random(ModelDim, ModelDim, new ContinuousUniform(rangeMin, rangeMax)));
+        }
+        MatrixF offseto = DenseMatrix.Build.Random(ModelDim * NumHeads, ModelDim, new ContinuousUniform(rangeMin, rangeMax));
 
-        // Apply the offset to each element in each matrix.
-        W_q += offsetq;
-        W_k += offsetk;
-        W_v += offsetv;
+        for (int h = 0; h < NumHeads; h++)
+        {
+            W_q[h] += offsetq[h];
+            W_k[h] += offsetk[h];
+            W_v[h] += offsetv[h];
+        }
         W_o += offseto;
 
         NormalizeWeights();
@@ -115,40 +130,49 @@ public class SelfAttention
         float rangeMin = -absOffset;
         float rangeMax = absOffset;
 
-        // Generate initial offset matrices with random noise.
-        MatrixF offsetq = DenseMatrix.Build.Random(ModelDim, ModelDim, new ContinuousUniform(rangeMin, rangeMax));
-        MatrixF offsetk = DenseMatrix.Build.Random(ModelDim, ModelDim, new ContinuousUniform(rangeMin, rangeMax));
-        MatrixF offsetv = DenseMatrix.Build.Random(ModelDim, ModelDim, new ContinuousUniform(rangeMin, rangeMax));
-        MatrixF offseto = DenseMatrix.Build.Random(ModelDim, ModelDim, new ContinuousUniform(rangeMin, rangeMax));
+        List<MatrixF> offsetq = new();
+        List<MatrixF> offsetk = new();
+        List<MatrixF> offsetv = new();
+        for (int h = 0; h < NumHeads; h++)
+        {
+            offsetq.Add(DenseMatrix.Build.Random(ModelDim, ModelDim, new ContinuousUniform(rangeMin, rangeMax)));
+            offsetk.Add(DenseMatrix.Build.Random(ModelDim, ModelDim, new ContinuousUniform(rangeMin, rangeMax)));
+            offsetv.Add(DenseMatrix.Build.Random(ModelDim, ModelDim, new ContinuousUniform(rangeMin, rangeMax)));
+        }
+        MatrixF offseto = DenseMatrix.Build.Random(ModelDim * NumHeads, ModelDim, new ContinuousUniform(rangeMin, rangeMax));
 
         // For each element in each matrix, only keep the noise if a random draw is less than percentChanged.
-        for (int i = 0; i < ModelDim; i++)
+        for (int h = 0; h < NumHeads; h++)
+        {
+            for (int i = 0; i < ModelDim; i++)
+            {
+                for (int j = 0; j < ModelDim; j++)
+                {
+                    if (random.NextDouble() >= percentChanged)
+                        offsetq[h][i, j] = 0f;
+                    if (random.NextDouble() >= percentChanged)
+                        offsetk[h][i, j] = 0f;
+                    if (random.NextDouble() >= percentChanged)
+                        offsetv[h][i, j] = 0f;
+                }
+            }
+        }
+        for (int i = 0; i < ModelDim * NumHeads; i++)
         {
             for (int j = 0; j < ModelDim; j++)
             {
                 if (random.NextDouble() >= percentChanged)
-                {
-                    offsetq[i, j] = 0f;
-                }
-                if (random.NextDouble() >= percentChanged)
-                {
-                    offsetk[i, j] = 0f;
-                }
-                if (random.NextDouble() >= percentChanged)
-                {
-                    offsetv[i, j] = 0f;
-                }
-                if (random.NextDouble() >= percentChanged)
-                {
                     offseto[i, j] = 0f;
-                }
             }
         }
 
         // Apply the (sparsified) noise offsets.
-        W_q += offsetq;
-        W_k += offsetk;
-        W_v += offsetv;
+        for (int h = 0; h < NumHeads; h++)
+        {
+            W_q[h] += offsetq[h];
+            W_k[h] += offsetk[h];
+            W_v[h] += offsetv[h];
+        }
         W_o += offseto;
 
         // NormalizeWeights();
@@ -157,9 +181,12 @@ public class SelfAttention
 
     public void NormalizeWeights()
     {
-        W_q.TanhNormalize();
-        W_k.TanhNormalize();
-        W_v.TanhNormalize();
+        for (int h = 0; h < NumHeads; h++)
+        {
+            W_q[h].TanhNormalize();
+            W_k[h].TanhNormalize();
+            W_v[h].TanhNormalize();
+        }
         W_o.TanhNormalize();
     }
 
@@ -169,11 +196,17 @@ public class SelfAttention
         float rangeMin = -absOffset;
         float rangeMax = absOffset;
 
-        // Initialize weight matrices.
-        MatrixF offsetq = DenseMatrix.Build.Random(ModelDim, ModelDim, new ContinuousUniform(rangeMin, rangeMax));
-        MatrixF offsetk = DenseMatrix.Build.Random(ModelDim, ModelDim, new ContinuousUniform(rangeMin, rangeMax));
-        MatrixF offsetv = DenseMatrix.Build.Random(ModelDim, ModelDim, new ContinuousUniform(rangeMin, rangeMax));
-        MatrixF offseto = DenseMatrix.Build.Random(ModelDim, ModelDim, new ContinuousUniform(rangeMin, rangeMax));
+        // Initialize weight matrices for each head.
+        List<MatrixF> offsetq = new();
+        List<MatrixF> offsetk = new();
+        List<MatrixF> offsetv = new();
+        for (int h = 0; h < NumHeads; h++)
+        {
+            offsetq.Add(DenseMatrix.Build.Random(ModelDim, ModelDim, new ContinuousUniform(rangeMin, rangeMax)));
+            offsetk.Add(DenseMatrix.Build.Random(ModelDim, ModelDim, new ContinuousUniform(rangeMin, rangeMax)));
+            offsetv.Add(DenseMatrix.Build.Random(ModelDim, ModelDim, new ContinuousUniform(rangeMin, rangeMax)));
+        }
+        MatrixF offseto = DenseMatrix.Build.Random(ModelDim * NumHeads, ModelDim, new ContinuousUniform(rangeMin, rangeMax));
 
         SelfAttentionNoise noise = new SelfAttentionNoise();
         noise.W_qn = offsetq;
@@ -190,33 +223,39 @@ public class SelfAttention
         float rangeMin = -absOffset;
         float rangeMax = absOffset;
 
-        // Generate initial offset matrices with random noise.
-        MatrixF offsetq = DenseMatrix.Build.Random(ModelDim, ModelDim, new ContinuousUniform(rangeMin, rangeMax));
-        MatrixF offsetk = DenseMatrix.Build.Random(ModelDim, ModelDim, new ContinuousUniform(rangeMin, rangeMax));
-        MatrixF offsetv = DenseMatrix.Build.Random(ModelDim, ModelDim, new ContinuousUniform(rangeMin, rangeMax));
-        MatrixF offseto = DenseMatrix.Build.Random(ModelDim, ModelDim, new ContinuousUniform(rangeMin, rangeMax));
+        List<MatrixF> offsetq = new();
+        List<MatrixF> offsetk = new();
+        List<MatrixF> offsetv = new();
+        for (int h = 0; h < NumHeads; h++)
+        {
+            offsetq.Add(DenseMatrix.Build.Random(ModelDim, ModelDim, new ContinuousUniform(rangeMin, rangeMax)));
+            offsetk.Add(DenseMatrix.Build.Random(ModelDim, ModelDim, new ContinuousUniform(rangeMin, rangeMax)));
+            offsetv.Add(DenseMatrix.Build.Random(ModelDim, ModelDim, new ContinuousUniform(rangeMin, rangeMax)));
+        }
+        MatrixF offseto = DenseMatrix.Build.Random(ModelDim * NumHeads, ModelDim, new ContinuousUniform(rangeMin, rangeMax));
 
         // For each element in each matrix, only keep the noise if a random draw is less than percentChanged.
-        for (int i = 0; i < ModelDim; i++)
+        for (int h = 0; h < NumHeads; h++)
+        {
+            for (int i = 0; i < ModelDim; i++)
+            {
+                for (int j = 0; j < ModelDim; j++)
+                {
+                    if (random.NextDouble() >= percentChanged)
+                        offsetq[h][i, j] = 0f;
+                    if (random.NextDouble() >= percentChanged)
+                        offsetk[h][i, j] = 0f;
+                    if (random.NextDouble() >= percentChanged)
+                        offsetv[h][i, j] = 0f;
+                }
+            }
+        }
+        for (int i = 0; i < ModelDim * NumHeads; i++)
         {
             for (int j = 0; j < ModelDim; j++)
             {
                 if (random.NextDouble() >= percentChanged)
-                {
-                    offsetq[i, j] = 0f;
-                }
-                if (random.NextDouble() >= percentChanged)
-                {
-                    offsetk[i, j] = 0f;
-                }
-                if (random.NextDouble() >= percentChanged)
-                {
-                    offsetv[i, j] = 0f;
-                }
-                if (random.NextDouble() >= percentChanged)
-                {
                     offseto[i, j] = 0f;
-                }
             }
         }
 
@@ -231,9 +270,12 @@ public class SelfAttention
 
     public void ApplyNoise(SelfAttentionNoise noise)
     {
-        W_q += noise.W_qn;
-        W_k += noise.W_kn;
-        W_v += noise.W_vn;
+        for (int h = 0; h < NumHeads; h++)
+        {
+            W_q[h] += noise.W_qn[h];
+            W_k[h] += noise.W_kn[h];
+            W_v[h] += noise.W_vn[h];
+        }
         W_o += noise.W_on;
 
         NormalizeWeights();
@@ -244,10 +286,15 @@ public class SelfAttention
 
     public int ParamCount()
     {
-        return W_q.RowCount * W_q.ColumnCount +
-               W_k.RowCount * W_k.ColumnCount +
-               W_v.RowCount * W_v.ColumnCount +
-               W_o.RowCount * W_o.ColumnCount;
+        int count = 0;
+        for (int h = 0; h < NumHeads; h++)
+        {
+            count += W_q[h].RowCount * W_q[h].ColumnCount;
+            count += W_k[h].RowCount * W_k[h].ColumnCount;
+            count += W_v[h].RowCount * W_v[h].ColumnCount;
+        }
+        count += W_o.RowCount * W_o.ColumnCount;
+        return count;
     }
 
     // --------------------------------------------------------------------------------------------
@@ -261,26 +308,35 @@ public class SelfAttention
     {
         // Compute queries, keys, and values.
         // If input has shape (n, ModelDim) and W_x has shape (ModelDim, ModelDim), then the result is (n, ModelDim).
-        MatrixF Q = input * W_q;
-        MatrixF K = input * W_k;
-        MatrixF V = input * W_v;
+        List<MatrixF> headContexts = new();
+        for (int h = 0; h < NumHeads; h++)
+        {
+            MatrixF Q = input * W_q[h];
+            MatrixF K = input * W_k[h];
+            MatrixF V = input * W_v[h];
 
-        // Compute raw attention scores with Q * K^T.
-        // This gives a score matrix of shape (n, n).
-        MatrixF scores = Q * K.Transpose();
+            MatrixF scores = Q * K.Transpose();
+            float scale = 1.0f / MathF.Sqrt(ModelDim);
+            scores = scores.Multiply(scale);
+            MatrixF attentionWeights = SoftmaxRows(scores);
+            MatrixF context = attentionWeights * V;
+            headContexts.Add(context);
+        }
 
-        // Scale the scores by 1/sqrt(ModelDim) for numerical stability.
-        float scale = 1.0f / MathF.Sqrt(ModelDim);
-        scores = scores.Multiply(scale);
+        int n = input.RowCount;
+        MatrixF concat = DenseMatrix.Create(n, ModelDim * NumHeads, 0f);
+        for (int h = 0; h < NumHeads; h++)
+        {
+            for (int i = 0; i < n; i++)
+            {
+                for (int j = 0; j < ModelDim; j++)
+                {
+                    concat[i, h * ModelDim + j] = headContexts[h][i, j];
+                }
+            }
+        }
 
-        // Apply softmax to each row to obtain attention weights.
-        MatrixF attentionWeights = SoftmaxRows(scores);
-
-        // Multiply the attention weights by V to get the context (weighted sum).
-        MatrixF context = attentionWeights * V;
-
-        // Apply a final linear projection.
-        MatrixF output = context * W_o;
+        MatrixF output = concat * W_o;
 
         return output;
     }
@@ -324,12 +380,20 @@ public class SelfAttention
 
     public string Report()
     {
-        return $"SelfAttention // Input Length: {InputLen} // Model Dimension: {ModelDim} // Parameter Count: {ParamCount()} // Weight Shapes (RowxCol): [Q: {W_q.RowCount}x{W_q.ColumnCount}, K: {W_k.RowCount}x{W_k.ColumnCount}, V: {W_v.RowCount}x{W_v.ColumnCount}, O: {W_o.RowCount}x{W_o.ColumnCount}] // Checksum: {CheckSum()}";
+        return $"SelfAttention // Heads: {NumHeads} // Input Length: {InputLen} // Model Dimension: {ModelDim} // Parameter Count: {ParamCount()} // O Shape: {W_o.RowCount}x{W_o.ColumnCount} // Checksum: {CheckSum()}";
     }
 
     public float CheckSum()
     {
-        return W_q.RowSums().Sum() + W_k.RowSums().Sum() + W_v.RowSums().Sum() + W_o.RowSums().Sum();
+        float sum = 0f;
+        for (int h = 0; h < NumHeads; h++)
+        {
+            sum += W_q[h].RowSums().Sum();
+            sum += W_k[h].RowSums().Sum();
+            sum += W_v[h].RowSums().Sum();
+        }
+        sum += W_o.RowSums().Sum();
+        return sum;
     }
 
     // --------------------------------------------------------------------------------------------
@@ -344,16 +408,16 @@ public class SelfAttention
             // Write the model dimension.
             writer.WriteLine(InputLen);
             writer.WriteLine(ModelDim);
+            writer.WriteLine(NumHeads);
 
-            string q_string = MatrixOperations.MatrixToString(W_q);
-            string k_string = MatrixOperations.MatrixToString(W_k);
-            string v_string = MatrixOperations.MatrixToString(W_v);
-            string o_string = MatrixOperations.MatrixToString(W_o);
+            for (int h = 0; h < NumHeads; h++)
+            {
+                writer.WriteLine(MatrixOperations.MatrixToString(W_q[h]));
+                writer.WriteLine(MatrixOperations.MatrixToString(W_k[h]));
+                writer.WriteLine(MatrixOperations.MatrixToString(W_v[h]));
+            }
 
-            writer.WriteLine(q_string);
-            writer.WriteLine(k_string);
-            writer.WriteLine(v_string);
-            writer.WriteLine(o_string);
+            writer.WriteLine(MatrixOperations.MatrixToString(W_o));
         }
     }
 
@@ -367,38 +431,29 @@ public class SelfAttention
             // Read the model dimension.
             int inputLen = int.Parse(reader.ReadLine());
             int modelDim = int.Parse(reader.ReadLine());
+            int numHeads = int.Parse(reader.ReadLine());
 
-            string? q_string = reader.ReadLine();
-            string? k_string = reader.ReadLine();
-            string? v_string = reader.ReadLine();
+            SelfAttention layer = new SelfAttention(inputLen, modelDim, numHeads);
+
+            for (int h = 0; h < numHeads; h++)
+            {
+                string? q_string = reader.ReadLine();
+                string? k_string = reader.ReadLine();
+                string? v_string = reader.ReadLine();
+                if (q_string == null || k_string == null || v_string == null)
+                    throw new ArgumentException("Input processing error");
+                MatrixOperations.TryStringToMatrix(q_string, out var qMat);
+                MatrixOperations.TryStringToMatrix(k_string, out var kMat);
+                MatrixOperations.TryStringToMatrix(v_string, out var vMat);
+                layer.W_q[h] = qMat!;
+                layer.W_k[h] = kMat!;
+                layer.W_v[h] = vMat!;
+            }
             string? o_string = reader.ReadLine();
-
-            // check the strings are valid
-            if (q_string == null || k_string == null || v_string == null || o_string == null)
+            if (o_string == null)
                 throw new ArgumentException("Input processing error");
-
-            MatrixF newQ;
-            MatrixF newK;
-            MatrixF newV;
-            MatrixF newO;
-
-            // Load each weight matrix and assign to the corresponding property.
-            bool q_read_ok = (MatrixOperations.TryStringToMatrix(q_string, out newQ!));
-            bool k_read_ok = (MatrixOperations.TryStringToMatrix(k_string, out newK!));
-            bool v_read_ok = (MatrixOperations.TryStringToMatrix(v_string, out newV!));
-            bool o_read_ok = (MatrixOperations.TryStringToMatrix(o_string, out newO!));
-
-            if (!q_read_ok || !k_read_ok || !v_read_ok || !o_read_ok)
-                 throw new ArgumentException("Matrix parsing error");
-
-            // Create a new SelfAttention instance.
-            // (The constructor will initialize random weights, but we overwrite them below.)
-            SelfAttention layer = new SelfAttention(inputLen, modelDim);
-
-            if (q_read_ok) layer.W_q = newQ!;
-            if (k_read_ok) layer.W_k = newK!;
-            if (v_read_ok) layer.W_v = newV!;
-            if (o_read_ok) layer.W_o = newO!;
+            MatrixOperations.TryStringToMatrix(o_string, out var oMat);
+            layer.W_o = oMat!;
 
             return layer;
         }
@@ -423,32 +478,36 @@ public class SelfAttention
                 {
                     writer.Write(InputLen);
                     writer.Write(ModelDim);
+                    writer.Write(NumHeads);
 
-                    for (int i = 0; i < ModelDim; i++)
+                    for (int h = 0; h < NumHeads; h++)
                     {
-                        for (int j = 0; j < ModelDim; j++)
+                        for (int i = 0; i < ModelDim; i++)
                         {
-                            writer.Write(W_q[i, j]);
+                            for (int j = 0; j < ModelDim; j++)
+                            {
+                                writer.Write(W_q[h][i, j]);
+                            }
+                        }
+
+                        for (int i = 0; i < ModelDim; i++)
+                        {
+                            for (int j = 0; j < ModelDim; j++)
+                            {
+                                writer.Write(W_k[h][i, j]);
+                            }
+                        }
+
+                        for (int i = 0; i < ModelDim; i++)
+                        {
+                            for (int j = 0; j < ModelDim; j++)
+                            {
+                                writer.Write(W_v[h][i, j]);
+                            }
                         }
                     }
 
-                    for (int i = 0; i < ModelDim; i++)
-                    {
-                        for (int j = 0; j < ModelDim; j++)
-                        {
-                            writer.Write(W_k[i, j]);
-                        }
-                    }
-
-                    for (int i = 0; i < ModelDim; i++)
-                    {
-                        for (int j = 0; j < ModelDim; j++)
-                        {
-                            writer.Write(W_v[i, j]);
-                        }
-                    }
-
-                    for (int i = 0; i < ModelDim; i++)
+                    for (int i = 0; i < ModelDim * NumHeads; i++)
                     {
                         for (int j = 0; j < ModelDim; j++)
                         {
@@ -485,34 +544,38 @@ public class SelfAttention
                 {
                     int inputLen = reader.ReadInt32();
                     int modelDim = reader.ReadInt32();
+                    int numHeads = reader.ReadInt32();
 
-                    SelfAttention layer = new SelfAttention(inputLen, modelDim);
+                    SelfAttention layer = new SelfAttention(inputLen, modelDim, numHeads);
 
-                    for (int i = 0; i < modelDim; i++)
+                    for (int h = 0; h < numHeads; h++)
                     {
-                        for (int j = 0; j < modelDim; j++)
+                        for (int i = 0; i < modelDim; i++)
                         {
-                            layer.W_q[i, j] = reader.ReadSingle();
+                            for (int j = 0; j < modelDim; j++)
+                            {
+                                layer.W_q[h][i, j] = reader.ReadSingle();
+                            }
+                        }
+
+                        for (int i = 0; i < modelDim; i++)
+                        {
+                            for (int j = 0; j < modelDim; j++)
+                            {
+                                layer.W_k[h][i, j] = reader.ReadSingle();
+                            }
+                        }
+
+                        for (int i = 0; i < modelDim; i++)
+                        {
+                            for (int j = 0; j < modelDim; j++)
+                            {
+                                layer.W_v[h][i, j] = reader.ReadSingle();
+                            }
                         }
                     }
 
-                    for (int i = 0; i < modelDim; i++)
-                    {
-                        for (int j = 0; j < modelDim; j++)
-                        {
-                            layer.W_k[i, j] = reader.ReadSingle();
-                        }
-                    }
-
-                    for (int i = 0; i < modelDim; i++)
-                    {
-                        for (int j = 0; j < modelDim; j++)
-                        {
-                            layer.W_v[i, j] = reader.ReadSingle();
-                        }
-                    }
-
-                    for (int i = 0; i < modelDim; i++)
+                    for (int i = 0; i < modelDim * numHeads; i++)
                     {
                         for (int j = 0; j < modelDim; j++)
                         {

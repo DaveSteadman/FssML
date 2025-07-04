@@ -54,6 +54,7 @@ public static class TrainingFramework
         int vocabSize = 2500,
         int inputSize = 10,
         int embeddingSize = 100,
+        int numHeads = 2,
         float noiseVal = 0.1f,
         float percentToChange = 1f)
     {
@@ -63,6 +64,7 @@ public static class TrainingFramework
         model.Create01_CreateBigram("./SampleStr.txt");
         model.Create02_CreateEmbedding(embeddingSize);
         model.Create03_CreatePositionalEncoding(inputSize);
+        model.ModelDetails.NumHeads = numHeads;
         model.Create04_CreateSelfAttention();
         model.Create05_CreateFeedForward();
         model.Create04b_CreateSelfAttention2();

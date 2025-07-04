@@ -72,6 +72,7 @@ public struct TransformerModelDetails
     public int   EmbeddingDim;
     public int   FFHiddenDim;
     public int   InputLen;
+    public int   NumHeads;
     public float NoiseVal;
     public float PercentChange;
     public int   NumIterations;
@@ -82,17 +83,19 @@ public struct TransformerModelDetails
         EmbeddingDim = 0;
         FFHiddenDim = 0;
         InputLen = 0;
+        NumHeads = 1;
         NoiseVal = 0f;
         PercentChange = 0f;
         NumIterations = 0;
     }
 
-    public TransformerModelDetails(int vocabSize, int embeddingDim, int ffHiddenDim, int inputLen, float noiseVal, float percentChange)
+    public TransformerModelDetails(int vocabSize, int embeddingDim, int ffHiddenDim, int inputLen, int numHeads, float noiseVal, float percentChange)
     {
         VocabSize     = vocabSize;
         EmbeddingDim  = embeddingDim;
         FFHiddenDim   = ffHiddenDim;
         InputLen      = inputLen;
+        NumHeads      = numHeads;
         NoiseVal      = noiseVal;
         PercentChange = percentChange;
         NumIterations = 0;
@@ -107,6 +110,7 @@ public struct TransformerModelDetails
             writer.WriteLine(EmbeddingDim);
             writer.WriteLine(FFHiddenDim);
             writer.WriteLine(InputLen);
+            writer.WriteLine(NumHeads);
             writer.WriteLine(NoiseVal.ToString("F4"));
             writer.WriteLine(PercentChange.ToString("F4"));
             writer.WriteLine(NumIterations);
@@ -123,6 +127,7 @@ public struct TransformerModelDetails
             newDetails.EmbeddingDim = int.Parse(reader.ReadLine());
             newDetails.FFHiddenDim = int.Parse(reader.ReadLine());
             newDetails.InputLen = int.Parse(reader.ReadLine());
+            newDetails.NumHeads = int.Parse(reader.ReadLine());
             newDetails.NoiseVal = float.Parse(reader.ReadLine());
             newDetails.PercentChange = float.Parse(reader.ReadLine());
             newDetails.NumIterations = int.Parse(reader.ReadLine());
@@ -273,7 +278,7 @@ public class TransformerModel
         if (Embedding == null)
             throw new Exception("Embedding must be created before creating the self-attention layer.");
 
-        SelfAtt = new SelfAttention(ModelDetails.InputLen, ModelDetails.EmbeddingDim);
+        SelfAtt = new SelfAttention(ModelDetails.InputLen, ModelDetails.EmbeddingDim, ModelDetails.NumHeads);
     }
 
     public void Create05_CreateFeedForward()
@@ -290,7 +295,7 @@ public class TransformerModel
         if (FeedForward == null)
             throw new Exception("Feed-forward must be created before creating the second self-attention layer.");
 
-        SelfAtt2 = new SelfAttention(ModelDetails.InputLen, ModelDetails.EmbeddingDim);
+        SelfAtt2 = new SelfAttention(ModelDetails.InputLen, ModelDetails.EmbeddingDim, ModelDetails.NumHeads);
     }
 
     public void Create05b_CreateFeedForward2()

@@ -55,7 +55,8 @@ namespace MathNetDemo
                 modeldirname,
                 vocabSize: 2500,
                 inputSize: 10,
-                embeddingSize: 50);
+                embeddingSize: 50,
+                numHeads: 2);
         }
 
         public static void DemoModel100K_Train()
@@ -142,7 +143,8 @@ namespace MathNetDemo
                 modeldirname,
                 vocabSize: 3500,
                 inputSize: 20,
-                embeddingSize: 60);
+                embeddingSize: 60,
+                numHeads: 2);
         }
 
         public static void DemoModel500K_Train()
