@@ -88,7 +88,8 @@ public static class TrainingFramework
         Console.WriteLine($"Model Report: {model.Report()}");
 
         // Crte the training data
-        List<TrainingInput> trainData = ConstructTrainingPass(model, trainingdata, 50);
+        List<TrainingInput> trainData = ConstructTrainingPass(model, trainingdata, 5000);
+        //List<TrainingInput> trainData = ConstructFullTrainingPass(model, trainingdata);
 
         // Get the training score for this model
         float baselinePredictionScore = 0f;
@@ -287,12 +288,15 @@ public static class TrainingFramework
             // If the new model is better, save it
             if (newPredictionScore > retScore)
             {
+                // Note the improvement
+                float improvement = newPredictionScore - retScore;
+
                 // Save the new model
                 retmodel = modelMutation;
                 retScore = newPredictionScore;
 
                 // Pad threadID to width 3, right-aligned, space-padded
-                Console.WriteLine($"Thread {threadID,2} // Pass {i,2}/{numPasses} // Score {newPredictionScore}");
+                Console.WriteLine($"Thread {threadID,2} // Pass {i,2}/{numPasses} // Score {newPredictionScore} ({improvement:F1})");
 
                 NoiseQueue.Enqueue(newNoise);
             }
@@ -350,6 +354,49 @@ public static class TrainingFramework
 
         //return trainingPass;
         return trainingSampleList;
+    }
+
+    // ConstructFullTrainingPass - Uses the entire dataset for training
+    private static List<TrainingInput> ConstructFullTrainingPass(TransformerModel model, string trainingdata)
+    {
+        List<TrainingInput> trainingPass = new List<TrainingInput>();
+
+        // Convert input into tokens
+        List<int> tokenIds = model.Vocab!.TokenizeToIds(trainingdata);
+        int padTokId = model.Vocab!.GetTokenId("<PAD>");
+
+        // Loop through the input list of tokens, setting up the training data of "windows" of
+        // whole sets of tokens
+        int windowSize = model.ModelDetails.InputLen;
+
+        Console.WriteLine($"Creating FULL Training Data: {tokenIds.Count} tokens, window size {windowSize}");
+        Console.WriteLine($"This will create approximately {tokenIds.Count - windowSize} training examples");
+
+        for (int i = 0; i < tokenIds.Count - windowSize; i++)
+        {
+            // Create a training input
+            TrainingInput trainingInput = new TrainingInput();
+            trainingInput.InputTokenIdList.AddRange(tokenIds.GetRange(i, windowSize));
+            trainingInput.ExpectedOutputTokenId = tokenIds[i + windowSize];
+
+            trainingPass.Add(trainingInput);
+
+            // Progress indicator for large datasets
+            if (trainingPass.Count % 50000 == 0)
+            {
+                Console.WriteLine($"Generated {trainingPass.Count} training examples...");
+            }
+        }
+
+        Console.WriteLine($"Full training data created: {trainingPass.Count} examples");
+
+        // List the first ten training inputs for verification
+        for (int i = 0; i < Math.Min(10, trainingPass.Count); i++)
+        {
+            Console.WriteLine($"Training Input {i}: {model.Vocab.DebugTokenList(trainingPass[i].InputTokenIdList)} -> {model.Vocab.GetTokenString(trainingPass[i].ExpectedOutputTokenId)}");
+        }
+
+        return trainingPass;
     }
 
     // --------------------------------------------------------------------------------------------

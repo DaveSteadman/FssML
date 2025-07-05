@@ -136,7 +136,8 @@ namespace MathNetDemo
                 TransformerModel model2 = TransformerModel.LoadModel(modeldirname);
                 Console.WriteLine($"\n\n---- RUN {i}/{numCycles} ----------------\n");
 
-                TrainingFramework.NextTokens(model2, "With many tears they singled out the whitened", 10);
+                Console.WriteLine("Most experts would likely agree that while we may see incremental, recursive improvements over coming decades, achieving a model that autonomously self‑improves without any supervision is still a long‑term research goal.");
+                TrainingFramework.NextTokens(model2, "Most experts would likely agree that while we may see", 10);
 
                 if (!TrainingFramework.validRun)
                     break;
@@ -210,12 +211,16 @@ namespace MathNetDemo
 
                 TransformerModel model2 = TransformerModel.LoadModel(modeldirname);
 
-                Console.WriteLine($"With many tears they singled out the whitened bones of their loved comrade and laid them within a golden urn.");
+
+
                 TrainingFramework.NextTokens(model2, "you shall now pay me in full", 10);
 
                 if (!TrainingFramework.validRun)
                     break;
             }
+
+
+
 
             //TrainingFramework.TrainModel_Backprop(modeldirname, input);
         }
