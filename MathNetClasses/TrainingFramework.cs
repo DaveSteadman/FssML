@@ -169,46 +169,23 @@ public static class TrainingFramework
 
         Console.WriteLine($"\n\nApplying winning noise: {NoiseQueue.Count} items\n\n");
 
-        // Apply all successful noise to the model
+        // Apply all successful noise directly to the model without re-scoring
         float retScore = baselinePredictionScore;
 
         float totalSuccessNoise = 0f;
         float totalSuccessPercent = 0f;
-        // int successCount = 0;
         while (TryDequeue(out ModelNoise noise))
         {
             if (!validRun) break;
             if (Console.KeyAvailable) { Console.WriteLine("Keystroke detected: ValidRun set false"); validRun = false; }
 
             model.ModelDetails.NumIterations++;
-            TransformerModel modelMutation = model.DeepCopy();
-            modelMutation.ApplyNoise(noise);
+            model.ApplyNoise(noise);
+            model.DirPath = modeldirname;
+            model.SaveModel();
 
-            float newPredictionScore = 0f;
-            foreach (TrainingInput input in trainData)
-            {
-                newPredictionScore += modelMutation.PredictionScore(input.InputTokenIdList, input.ExpectedOutputTokenId);
-            }
-
-            // If the new model is better, save it
-            if (newPredictionScore > retScore)
-            {
-                // Save the new model
-                model = modelMutation;
-                retScore = newPredictionScore;
-
-                Console.WriteLine($"Postthreads noise: // Score {newPredictionScore}");
-
-                model = modelMutation;
-                model.DirPath = modeldirname;
-                model.SaveModel();
-
-                // accumulate the best noise and percentage values
-                totalSuccessNoise = max(totalSuccessNoise, noise.recordedNoise);
-                totalSuccessPercent = max(totalSuccessPercent, noise.recordedPercentChange);
-                // successCount++;
-            }
-            newmodel.ModelDetails.NumIterations++;
+            totalSuccessNoise = max(totalSuccessNoise, noise.recordedNoise);
+            totalSuccessPercent = max(totalSuccessPercent, noise.recordedPercentChange);
         }
 
         // // Calculate the average noise and percent change (only if there were successes)
