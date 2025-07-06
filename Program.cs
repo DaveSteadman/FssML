@@ -1,5 +1,4 @@
-﻿
-// Setup Instructions
+﻿// Setup Instructions
 // ==================
 // dotnet new console -n MathNetDemo
 // cd MathNetDemo
@@ -41,13 +40,15 @@ namespace MathNetDemo
     class Program
     {
 
+        public static string CurrModelDirname = "./Model_100K_V3";
+
         // --------------------------------------------------------------------------------------------
-        // MARK: v0.5
+        // MARK: Create
         // --------------------------------------------------------------------------------------------
 
         public static void DemoModel100K_Create()
         {
-            string modeldirname = "./Model_100K_V3";
+            string modeldirname = CurrModelDirname;
             string textFilepath = "SampleStr.txt";
             string input = File.ReadAllText(textFilepath);
 
@@ -71,9 +72,13 @@ namespace MathNetDemo
                 embeddingSize: 50);
         }
 
+        // --------------------------------------------------------------------------------------------
+        // MARK: Train
+        // --------------------------------------------------------------------------------------------
+
         public static void DemoModel100K_Train()
         {
-            string modeldirname = "./Model_100K_V3";
+            string modeldirname = CurrModelDirname;
             string textFilepath = "SampleStr.txt";
             string input = File.ReadAllText(textFilepath);
 
@@ -146,83 +151,42 @@ namespace MathNetDemo
             //TrainingFramework.TrainModel_Backprop(modeldirname, input);
         }
 
+
+        // --------------------------------------------------------------------------------------------
+        // MARK: Predict
         // --------------------------------------------------------------------------------------------
 
-        public static void DemoModel500K_Create()
+        public static void DemoModel_Predict(string prompt)
         {
-            string modeldirname = "./Model_500K_V3";
-            string textFilepath = "SampleStr.txt";
-            string input = File.ReadAllText(textFilepath);
+            string modeldirname = CurrModelDirname;
 
-            TrainingFramework.CreateInitialModel(
-                modeldirname,
-                vocabSize: 3500,
-                inputSize: 20,
-                embeddingSize: 60);
-        }
-
-        public static void DemoModel500K_Train()
-        {
-            string modeldirname = "./Model_500K_V3";
-            string textFilepath = "SampleStr.txt";
-            string input = File.ReadAllText(textFilepath);
-
-            // Load the input string from file
-            TransformerModel model = TransformerModel.LoadModel(modeldirname);
-            List<string> tokList = model.Vocab!.TokenizeToStrings(input);
-            List<int> tokIdList = model.Vocab!.TokenizeToIds(input);
-
-            // Debug print the first 15 tokens and their IDs
-            for (int i = 0; i < 15; i++)
-                Console.Write($"[{tokList[i]}: {tokIdList[i]}] ");
-            Console.WriteLine();
-
-            // print the predicted 16th token from the bigram model
-            Console.WriteLine($"Count: {model.Bigram!.GetNumAssociations()}");
-
-            int startPredId = 15;
-            int prevTokId = tokIdList[startPredId];
-
-            for (int predcount = 0; predcount < 10; predcount++)
+            // Check if model directory exists
+            if (!System.IO.Directory.Exists(modeldirname))
             {
-                int tokPos = startPredId + predcount;
-                int nextTokId = model.Bigram!.GetNextTokenIdProbabilistic(prevTokId);
-                Console.WriteLine($"Actual: pos {tokPos} = [{tokList[tokPos]}: {tokIdList[tokPos]}] ");
-                Console.WriteLine($"Bigram: {prevTokId}->[{nextTokId}: >{model.Vocab!.GetTokenString(nextTokId)}<] ");
-
-                prevTokId = nextTokId;
+                Console.WriteLine($"ERROR: Model directory '{modeldirname}' does not exist.");
+                Console.WriteLine("Please create a model first using: dotnet run create");
+                return;
             }
 
-
-
-            // int j = 15;
-            // int nextId = model.Bigram!.GetNextTokenId(tokIdList[j-1]);
-            // Console.WriteLine($"Actual: [{tokList[j]}: {tokIdList[j]}] ");
-            // Console.WriteLine($"Bigram: {tokIdList[j-1]}->[{nextId}: >{model.Vocab!.GetTokenString(nextId)}<] ");
-
-            int numCycles = 100;
-            for (int i = 1; i <= numCycles; i++)
+            try
             {
-                Console.WriteLine($"\n\n---- TRAIN {i}/{numCycles} ----------------\n");
+                // Load the model
+                TransformerModel model = TransformerModel.LoadModel(modeldirname);
+                Console.WriteLine($"Model loaded: {model.Report()}");
+                Console.WriteLine();
 
-                TrainingFramework.TrainModel(modeldirname, input);
+                // Generate predictions
+                Console.WriteLine($"Prompt: \"{prompt}\"");
+                Console.WriteLine("Generating next 10 tokens...");
+                Console.WriteLine();
 
-                Console.WriteLine($"\n\n---- RUN {i}/{numCycles} ----------------\n");
-
-                TransformerModel model2 = TransformerModel.LoadModel(modeldirname);
-
-
-
-                TrainingFramework.NextTokens(model2, "you shall now pay me in full", 10);
-
-                if (!TrainingFramework.validRun)
-                    break;
+                TrainingFramework.NextTokens(model, prompt, 10);
             }
-
-
-
-
-            //TrainingFramework.TrainModel_Backprop(modeldirname, input);
+            catch (Exception ex)
+            {
+                Console.WriteLine($"ERROR: Failed to load model or generate predictions: {ex.Message}");
+                Console.WriteLine("Please ensure the model exists and is properly trained.");
+            }
         }
 
         // --------------------------------------------------------------------------------------------
@@ -255,6 +219,20 @@ namespace MathNetDemo
                     case "train":
                         DemoModel100K_Train();
                         break;
+                    case "predict":
+                        {
+                            if (args.Length < 2)
+                            {
+                                Console.WriteLine("Please provide a prompt after 'predict'");
+                                Console.WriteLine("Example: dotnet run predict \"Most experts would likely agree\"");
+                                return;
+                            }
+
+                            // Join all arguments after "predict" as the prompt
+                            string prompt = string.Join(" ", args.Skip(1));
+                            DemoModel_Predict(prompt);
+                        }
+                        break;
                     // Add more cases as needed
                     default:
                         Console.WriteLine("Unknown command.");
@@ -263,7 +241,7 @@ namespace MathNetDemo
             }
             else
             {
-                Console.WriteLine("Please provide a command: create or train");
+                Console.WriteLine("Please provide a command: create, train, or predict");
             }
         }
     }
