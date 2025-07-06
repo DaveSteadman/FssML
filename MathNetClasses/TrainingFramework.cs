@@ -88,7 +88,7 @@ public static class TrainingFramework
         Console.WriteLine($"Model Report: {model.Report()}");
 
         // Crte the training data
-        List<TrainingInput> trainData = ConstructTrainingPass(model, trainingdata, 5000);
+        List<TrainingInput> trainData = ConstructTrainingPass(model, trainingdata, 50);
         //List<TrainingInput> trainData = ConstructFullTrainingPass(model, trainingdata);
 
         // Get the training score for this model
