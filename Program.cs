@@ -41,6 +41,7 @@ namespace MathNetDemo
     {
 
         public static string CurrModelDirname = "./Model_100K_V3";
+        public static string CorpusTextFileName = "SampleStr_short.txt";
 
         // --------------------------------------------------------------------------------------------
         // MARK: Create
@@ -49,7 +50,7 @@ namespace MathNetDemo
         public static void DemoModel100K_Create()
         {
             string modeldirname = CurrModelDirname;
-            string textFilepath = "SampleStr.txt";
+            string textFilepath = CorpusTextFileName;
             string input = File.ReadAllText(textFilepath);
 
             // Check if model directory exists and prompt user
@@ -79,7 +80,7 @@ namespace MathNetDemo
         public static void DemoModel100K_Train()
         {
             string modeldirname = CurrModelDirname;
-            string textFilepath = "SampleStr.txt";
+            string textFilepath = CorpusTextFileName;
             string input = File.ReadAllText(textFilepath);
 
             // TrainingFramework.CreateInitialModel(
@@ -189,6 +190,46 @@ namespace MathNetDemo
             }
         }
 
+        public static void DemoModel_BigramPredict(string prompt)
+        {
+            string modeldirname = CurrModelDirname;
+
+            // Check if model directory exists
+            if (!System.IO.Directory.Exists(modeldirname))
+            {
+                Console.WriteLine($"ERROR: Model directory '{modeldirname}' does not exist.");
+                Console.WriteLine("Please create a model first using: dotnet run create");
+                return;
+            }
+
+            try
+            {
+                // Load the model
+                TransformerModel model = TransformerModel.LoadModel(modeldirname);
+                Console.WriteLine($"Model loaded: {model.Report()}");
+                Console.WriteLine();
+
+                // Prompt to tokens list
+                List<string> promptTokens = model.Vocab.TokenizeToStrings(prompt);
+                List<int> promptTokenIds = model.Vocab.TokenizeToIds(prompt);
+                int lastPromptToken = promptTokenIds[promptTokenIds.Count - 1];
+
+                // Generate predictions
+                Console.WriteLine($"Prompt: \"{prompt}\"");
+                Console.WriteLine("Generating next 10 tokens using bigram...");
+                Console.WriteLine();
+
+                List<int> bigramTokenIds = model.Bigram.GetNextTokenIdsList(lastPromptToken, 10, 0.02f);
+
+                Console.WriteLine($"Bigram Tokens: {model.Vocab.DebugTokenList(bigramTokenIds)}");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"ERROR: Failed to load model or generate predictions: {ex.Message}");
+                Console.WriteLine("Please ensure the model exists and is properly trained.");
+            }
+        }
+
         // --------------------------------------------------------------------------------------------
         // MARK: Main
         // --------------------------------------------------------------------------------------------
@@ -231,6 +272,22 @@ namespace MathNetDemo
                             // Join all arguments after "predict" as the prompt
                             string prompt = string.Join(" ", args.Skip(1));
                             DemoModel_Predict(prompt);
+                        }
+                        break;
+
+
+                    case "bigram":
+                        {
+                            if (args.Length < 2)
+                            {
+                                Console.WriteLine("Please provide a prompt after 'predict'");
+                                Console.WriteLine("Example: dotnet run predict \"Most experts would likely agree\"");
+                                return;
+                            }
+
+                            // Join all arguments after "predict" as the prompt
+                            string prompt = string.Join(" ", args.Skip(1));
+                            DemoModel_BigramPredict(prompt);
                         }
                         break;
                     // Add more cases as needed

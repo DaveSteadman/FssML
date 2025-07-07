@@ -87,9 +87,9 @@ public static class TrainingFramework
         TransformerModel model = TransformerModel.LoadModel(modeldirname);
         Console.WriteLine($"Model Report: {model.Report()}");
 
-        // Crte the training data
-        List<TrainingInput> trainData = ConstructTrainingPass(model, trainingdata, 50);
-        //List<TrainingInput> trainData = ConstructFullTrainingPass(model, trainingdata);
+        // Create the training data
+        //List<TrainingInput> trainData = ConstructTrainingPass(model, trainingdata, 1000);
+        List<TrainingInput> trainData = ConstructFullTrainingPass(model, trainingdata);
 
         // Get the training score for this model
         float baselinePredictionScore = 0f;
@@ -106,7 +106,7 @@ public static class TrainingFramework
 
         // Run multiple instances of TrainModelThread in parallel
         int numThreads = 10;
-        int numPasses = 2;
+        int numPasses = 10;
 
         float noiseVal = model.ModelDetails.NoiseVal; // e.g. 0.12 means +/-12% of the noise value
         float percentToChange = model.ModelDetails.PercentChange; // e.g. 1.0 means +/-100% of the percent change
@@ -137,19 +137,26 @@ public static class TrainingFramework
             percentValues.Add(percentThreadVal);
         }
 
+        // Add an outlier to the noise values to explore more extreme changes and alleviate trend to stagnation
+        noiseValues.Add(10); percentValues.Add(0.005f);
+        noiseValues.Add(5); percentValues.Add(0.05f);
 
         var tasks = new List<Task<(TransformerModel newModel, float newScore)>>();
 
 
-        for (int i = 0; i < numThreads; i++)
+        for (int i = 0; i < noiseValues.Count; i++)
         {
             int threadID = i;
             tasks.Add(TrainModelThreadAsync(model, trainData, baselinePredictionScore, numPasses, threadID, noiseValues[i], percentValues[i]));
 
         }
 
-        // Block until all threads are done
+
+
+        // --- Block until all threads are done -----------------------------------
         Task.WaitAll(tasks.ToArray());
+
+
 
         // Find the best result
         var bestResult = tasks.Select(t => t.Result).OrderByDescending(r => r.newScore).First();
@@ -179,10 +186,34 @@ public static class TrainingFramework
             if (!validRun) break;
             if (Console.KeyAvailable) { Console.WriteLine("Keystroke detected: ValidRun set false"); validRun = false; }
 
-            model.ModelDetails.NumIterations++;
-            model.ApplyNoise(noise);
-            model.DirPath = modeldirname;
-            model.SaveModel();
+            TransformerModel modelMutation = model.DeepCopy();
+            modelMutation.ApplyNoise(noise);
+
+            float newPredictionScore = 0f;
+            foreach (TrainingInput input in trainData)
+            {
+                newPredictionScore += modelMutation.PredictionScore(input.InputTokenIdList, input.ExpectedOutputTokenId);
+            }
+
+            // If the new model is better, save it
+            if (newPredictionScore > retScore)
+            {
+                // Save the new model
+                model = modelMutation;
+                retScore = newPredictionScore;
+
+                Console.WriteLine($"Postthreads noise: // Score {newPredictionScore}");
+
+                model = modelMutation;
+                model.DirPath = modeldirname;
+                model.SaveModel();
+
+                // accumulate the best noise and percentage values
+                totalSuccessNoise = max(totalSuccessNoise, noise.recordedNoise);
+                totalSuccessPercent = max(totalSuccessPercent, noise.recordedPercentChange);
+                // successCount++;
+            }
+            newmodel.ModelDetails.NumIterations++;
 
             totalSuccessNoise = max(totalSuccessNoise, noise.recordedNoise);
             totalSuccessPercent = max(totalSuccessPercent, noise.recordedPercentChange);

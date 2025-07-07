@@ -165,6 +165,39 @@ public class TokenBigram
         return maxToken;
     }
 
+    // Get the next most likely token, reading the bigram values and returning the highest
+    // noise = percentage of top token options to consider and randomly pick from
+    public int GetNextTokenIdWithNoise(int tokenID, float noise)
+    {
+        BigramEntry entry = BigramList[tokenID];
+
+        // If there are fewer than 2 combinations return the highest
+        int numCombinations = entry.TokenCounts.Count;
+        if (numCombinations < 2)
+            return GetNextTokenId(tokenID);
+
+        // Determine the number of top ranking elements we might want to pick from given the noise
+        int noiseCount = (int)(numCombinations * noise);
+        noiseCount = 3;
+
+        Console.WriteLine($"TokenID: {tokenID} has {numCombinations} combinations, noise count: {noiseCount}");
+
+        // filter the list into the top 5 tokens
+        var topTokens = entry.TokenCounts
+            .OrderByDescending(kvp => kvp.Value)
+            .Take(noiseCount)
+            .ToList();
+
+        // if the list is empty,return the most normal answer
+        if (topTokens.Count == 0)
+            return GetNextTokenId(tokenID);
+
+        // Randomly pick an item from the list to return
+        int randomIndex = random.Next(topTokens.Count);
+        return topTokens[randomIndex].Key;
+    }
+
+
     public int GetNextTokenIdProbabilistic(int tokenID)
     {
         BigramEntry entry = BigramList[tokenID];
@@ -187,6 +220,29 @@ public class TokenBigram
         // In theory, we should never reach here.
         return -1;
     }
+
+    // --------------------------------------------------------------------------------------------
+
+    // For a given starting token ID, return a list of all the next token IDs, using each one to predict the next
+
+    public List<int> GetNextTokenIdsList(int startingTokenID, int numTokens, float noise)
+    {
+        BigramEntry entry = BigramList[startingTokenID];
+        List<int> retList = new List<int>();
+
+        int nextTokenId = GetNextTokenIdWithNoise(startingTokenID, noise);
+        retList.Add(nextTokenId);
+
+        // Loop for the number of required tokens
+        for (int i = 0; i < numTokens; i++)
+        {
+            nextTokenId = GetNextTokenIdWithNoise(nextTokenId, noise);
+            retList.Add(nextTokenId);
+        }
+
+        return retList;
+    }
+
     // Return the total number of token associations
     public int GetNumAssociations()
     {
